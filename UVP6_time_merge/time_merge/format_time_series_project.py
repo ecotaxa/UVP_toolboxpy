@@ -74,7 +74,7 @@ new_folder= acq_output['folder'].unique()
 for i in new_folder:
 
     path_tree = pathlib.Path(i)
-    data_txt_list = path_tree.rglob("*.txt")
+    data_txt_list = sorted(path_tree.rglob("*.txt"))
     data_txt_string = [str(file_path) for file_path in data_txt_list]
     #Create one file
     my_data = append_files(data_txt_string)
