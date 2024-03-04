@@ -104,7 +104,7 @@ def write_splitted_data(splitted_data, output_folder, time_step, start_datetime)
         directory_name = os.path.join(output_folder, time_step_datetime.strftime('%Y%m%d-%H%M%S') + "_Merged")
         if not os.path.exists(directory_name):
             os.makedirs(directory_name)
-            images_folder = os.path.join(directory_name, "images")
+            images_folder = os.path.join(directory_name, "1")
             os.makedirs(images_folder)
         file_name = os.path.join(directory_name, time_step_datetime.strftime('%Y%m%d-%H%M%S') + "_Merged_data.txt")
         with open(file_name, 'w') as file:  
@@ -278,7 +278,7 @@ def vig_move(data_txt, vig_string):
         vig_list (list): A list of all the vig paths from the project folder
     """    
     path = pathlib.Path(data_txt)
-    project_to_move_vig = str(path.parent.absolute()) + '/images/'
+    project_to_move_vig = str(path.parent.absolute()) + '/1/'
     date_time_list = extract_data_dates(data_txt)
     vig_to_move = vig_select(date_time_list, vig_string)
     for source_path in vig_to_move:
