@@ -3,6 +3,7 @@ from datetime import datetime
 from os import path
 from tqdm import tqdm
 from usr_input import PathInput
+import zipfile
 from functions import extract_date
 from functions import append_files
 from usr_input import StartInput
@@ -99,10 +100,16 @@ for i in new_folder:
 proj_parent = pathlib.Path(path_to_look_at).parent.absolute()
 merged_data_txt_list = proj_parent.rglob("*Merged_data.txt")
 
+#Unzip image folders
 path_tree = pathlib.Path(path_to_look_at)
+zip_list = path_tree.rglob("*.zip")
+for file_path in zip_list:
+    with zipfile.ZipFile(file_path, 'r') as zip_ref:
+        zip_ref.extractall(file_path.parents[0])
 vig_list = path_tree.rglob("*.vig")
 vig_string = [str(file_path) for file_path in vig_list]
 
+#Copy corresponding vignettes into sequences folder
 print(f"\n Copying vignettes into new folders")
 for datatxt_merged in tqdm(merged_data_txt_list):
     vig_move(datatxt_merged, vig_string)
