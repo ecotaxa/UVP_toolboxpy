@@ -34,3 +34,5 @@ Once we are sure that our raw folders have the same acquisition parameters we ca
 ### Moving vignette to new raw folder
 
 Finally, the vig will be copied from the old raw folder, based on the different dates of the merged_data.txt dates.
+
+# UVP6_create_meta
