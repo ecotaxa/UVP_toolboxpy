@@ -36,3 +36,21 @@ Once we are sure that our raw folders have the same acquisition parameters we ca
 Finally, the vig will be copied from the old raw folder, based on the different dates of the merged_data.txt dates.
 
 # UVP6_create_meta
+## What does it do ?
+create metadata for a UVP MOORING project by processing data files stored in a specified folder. Here's a breakdown of what the script does:
+
+### Invite the user to specify the project, the latitude, longitude to execute
+
+When you will execute UVP6_create_meta.py a message will prompt you to provide the path of a UVP project with the longitude and latitude acquisition. The project should be organised as a standard UVP6 project, with a "raw" folder that includes different Merged.txt created from the script above UVP6_time_merge. 
+
+### Extracting Depth and Station ID
+we will extract depth and station ID from the folder path. The user should make sure that all the information needed are in the path or in the *.txt of folder config of the UVP
+
+### Processing Data Files
+The script searches for data files (*Merged_data.txt) in the specified folder, parses these files to extract relevant information like the filename, profile ID, and sample datetime. it also calculates the number of images in each .txt (end image number). In the end, it will create a DataFrame with this information, and classify it based on the datetime. 
+
+### Storing the meta file 
+The new datatxt will be named like "'uvp6_header_NAMEOFTHEPROJECT.txt". For now it is stored in your own repository and should be then moved manually to your project, in the meta file (this feature will be updated soon). 
+
+
+
