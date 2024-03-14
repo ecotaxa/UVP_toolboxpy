@@ -34,3 +34,12 @@ Once we are sure that our raw folders have the same acquisition parameters we ca
 ### Moving vignette to new raw folder
 
 Finally, the vig will be copied from the old raw folder, based on the different dates of the merged_data.txt dates.
+
+#UVP6_create_meta
+##What does it do?
+The script automates the process of extracting metadata from UVP mooring data files and creates a structured output file combining all the information you need for the UVP application. Here is the few steps it goes through.
+
+### Invite the user to specify the project, the longitude and latitude
+when you run create_meta.py a message will prompt you to provide the path of a UVP project with the longitude and latitude acquisition. The project should be organized as a standard UVP6 project, with a "raw" folder that includes different Merged.txt.
+
+
