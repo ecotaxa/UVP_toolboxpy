@@ -263,12 +263,12 @@ def acq_sort(acq_data_with_folder, path_input):
         copy_tree(source_path, destination_folder)
 
         #Rename old folder and data.txt with "_UsedForMerge"
-        ####################################################################################
-        #os.rename(destination_folder, destination_folder + '_UsedForMerge')
-        #path_tree = pathlib.Path(destination_folder)
-        #datafile_list = path_tree.rglob("*_data.txt")
-        #for file_path in datafile_list:
-        #    os.rename(str(file_path), str(file_path[0:-9]) + '_UsedForMerge' + str(file_path[-9:]))
+        os.rename(destination_folder, destination_folder + '_UsedForMerge')
+        path_tree = pathlib.Path(destination_folder + '_UsedForMerge')
+        datafile_list = path_tree.rglob("*_data.txt")
+        for file_path in datafile_list:
+            os.rename(str(file_path), str(file_path)[0:-9] + '_UsedForMerge' + str(file_path)[-9:])
+
 
 
 def vig_select(date_time_list, vig_string):
