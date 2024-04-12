@@ -35,6 +35,7 @@ Once we are sure that our raw folders have the same acquisition parameters we ca
 
 Finally, the vig will be copied from the old raw folder, based on the different dates of the merged_data.txt dates.
 
+
 # UVP6_create_meta
 ## What does it do ?
 create metadata for a UVP MOORING project by processing data files stored in a specified folder. Here's a breakdown of what the script does:
