@@ -81,6 +81,7 @@ for i in new_folder:
     my_data = append_files(data_txt_string)
 
     #Ask for the time step
+    print(f"\nFor the config in {path.split(i)[-1]}")
     step_input = StepInput()
 
     #Split the long data
