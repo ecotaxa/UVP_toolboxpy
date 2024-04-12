@@ -132,7 +132,7 @@ def read_acq(uvp6_files):
             lines = input_file.readlines()
         # Read all lines from the input file, skipping the first two rows
             if len(lines) >= 3:  # Check if there are at least 3 lines in the file
-                acq = ''.join([line for line in lines if "ACQ" in line.upper()])
+                acq = ''.join([line for line in lines if "ACQ_CONF" in line.upper()])
         # Continue with the rest of your code using acq
             else:
                 next
@@ -258,6 +258,15 @@ def acq_sort(acq_data_with_folder, path_input):
             os.makedirs(destination_folder)
 
         copy_tree(source_path, destination_folder)
+
+        #Rename old folder and data.txt with "_UsedForMerge"
+        ####################################################################################
+        #os.rename(destination_folder, destination_folder + '_UsedForMerge')
+        #path_tree = pathlib.Path(destination_folder)
+        #datafile_list = path_tree.rglob("*_data.txt")
+        #for file_path in datafile_list:
+        #    os.rename(str(file_path), str(file_path[0:-9]) + '_UsedForMerge' + str(file_path[-9:]))
+
 
 def vig_select(date_time_list, vig_string):
     """Return a list of the vignette path that correspond to the data of a data.txt file.

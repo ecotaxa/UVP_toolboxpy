@@ -23,7 +23,7 @@ if not path.isdir(path_to_look_at) :
 
 
 path_tree = pathlib.Path(path_to_look_at)
-data_txt_list = path_tree.rglob("*.txt")
+data_txt_list = path_tree.rglob('*_data.txt')
 data_txt_string = [str(file_path) for file_path in data_txt_list]
 
 date_strings = list()
@@ -101,6 +101,7 @@ proj_parent = pathlib.Path(path_to_look_at).parent.absolute()
 merged_data_txt_list = proj_parent.rglob("*Merged_data.txt")
 
 #Unzip image folders
+print(f"Unziping images...")
 path_tree = pathlib.Path(path_to_look_at)
 zip_list = path_tree.rglob("*.zip")
 for file_path in zip_list:
