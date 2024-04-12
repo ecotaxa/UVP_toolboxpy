@@ -65,7 +65,10 @@ def split_data(data, time_step, start_datetime):
         if line:
             # Extract the date and time from the line
             date_time_str, data_str = line.split(',', 1)
-            date_time = datetime.strptime(date_time_str, '%Y%m%d-%H%M%S')
+            try:
+                date_time = datetime.strptime(date_time_str, '%Y%m%d-%H%M%S')
+            except:
+                date_time = datetime.strptime(date_time_str, '%Y%m%d-%H%M%S-%f')
 
             # Calculate the difference in hours from the start_datetime
             time_difference = (date_time - start_datetime).total_seconds() / 3600
