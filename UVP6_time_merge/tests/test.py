@@ -1,3 +1,7 @@
+# test function for time_merge
+#
+# author : Flavien Petit, 2024
+
 import sys
 sys.path.append('/remote/complex/home/fpetit/UVP6_time_merge')
 from time_merge.functions import read_acq

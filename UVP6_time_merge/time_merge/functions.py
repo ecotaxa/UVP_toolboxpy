@@ -1,3 +1,8 @@
+# Functions to deal with uvp6 data/files/folders
+# Main used for UVP6_time_merge
+#
+# author : Flavien Petit, 2024
+
 import re
 import os 
 import shutil

@@ -1,3 +1,7 @@
+# Main script for UVP6_time_merge
+#
+# author : Flavien Petit, 2024
+
 import pathlib
 from datetime import datetime
 from os import path

@@ -1,3 +1,7 @@
+# Function to get different user inputs
+#
+# author : Flavien Petit, 2024
+
 def TimeStepInput():
     """Prompt the user to choose a time step, in hours, to split the data. 
 

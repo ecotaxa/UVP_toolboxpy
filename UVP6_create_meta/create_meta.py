@@ -2,6 +2,8 @@
 #14.03.2024 J.H.
 #you should have the directory of the file, your Lon and lat to insert 
 #for now the script saves the txt file in your repertory, and you should put it in the folder manually 
+#
+# author : Joelle Habib, 2024
  
 
 # libraries
