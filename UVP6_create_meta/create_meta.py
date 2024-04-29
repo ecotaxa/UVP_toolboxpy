@@ -22,6 +22,7 @@ first_image=0
 ship='mooring'
 
 #you should add the path without ' '  and until folder raw where the merged file are present
+#from youre home directory
 path_to_look_at = input("Enter the path of the folder where the data.txt to merged are stored: ")
 
 # example of path_to_look_at /home/jhabib/plankton/uvp6_missions/uvp6_sn000123lp/uvp6_sn000123lp_2021_23W0N_830m/raw/ 
@@ -32,8 +33,10 @@ if not path.isdir(path_to_look_at) :
     print("This path does not exists :", path_to_look_at)
 
 #insert lat, lon 
-longitude = float(input("Enter the longitude of the mooring,beware if it's negative': "))
-latitude = float(input("Enter the latitude of the mooring,beware if it's negative': "))
+print("\nLongitude positive to Est, Latitude positive to North")
+print("Longitude and latitude in decimal degrees")
+longitude = float(input("Enter the longitude of the mooring, beware if it's negative: "))
+latitude = float(input("Enter the latitude of the mooring, beware if it's negative: "))
 
 #longitude=-23.07
 #latitude=0.00  
@@ -52,9 +55,10 @@ for component1 in components:
                 
 
 if constantdepth is not None:
-    print("Depth:", constantdepth)
+    print("\nDepth:", constantdepth)
 else:
-    print("Depth not found in the path, you should add it manually.")
+    print("\nDepth not found in the path, you should add it manually.")
+    constantdepth = float(input("Enter the depth of the samples : "))
 
     
 # Find the component containing 'uvp6_sn' and extract the relevant part
@@ -65,19 +69,20 @@ for component in components:
         break
 
 if station_id is not None:
-    print("stationid:", station_id)
+    print("\nstationid:", station_id)
+    stationid = 'Mooring_' + station_id
 else:
-    print("Station ID not found in the path, you should add it manually.")
-    
-stationid='Mooring_'+station_id  
+    print("\nStation ID not found in the path, you should add it manually.")
+    stationid = input("Enter the station id: ")
+  
 
 #open the file of txt HW in config
-desired_part = os.path.dirname(os.path.dirname(path_to_look_at))  # Extract the parent directory two levels up
+desired_part = os.path.dirname(path_to_look_at)  # Extract the parent directory one levels up
 path_config = os.path.join(desired_part, 'config')
 
 
 path_tree = pathlib.Path(path_config)
-config_txt_list = path_tree.rglob("HW*.txt") #choose HW file for the volima, aa and exp
+config_txt_list = path_tree.rglob("HW*.txt") #choose HW file in config for the volima, aa and exp
 config_txt_string = [str(file_path) for file_path in config_txt_list]
 
 for input_file_path in config_txt_string:
@@ -158,7 +163,9 @@ for input_file_path in data_txt_string:
           
           #take the first value in the first string before the comma in each row
           first_string = lines[0].split(',')[0].strip()
-          sampledatetime_list.append(first_string)
+          date_time_millisec = first_string.split('-')  #careful to the different format in uvp data
+          date_time = date_time_millisec[0] + '-' + date_time_millisec[1]
+          sampledatetime_list.append(date_time)
         
 # Creating a dictionary with the lists
 print('create dic with lists')
@@ -228,11 +235,13 @@ df_combined['endimg'] = df_combined['endimg'].astype(int)
 # Split the path by '/'
 path_parts = path_to_look_at.split('/')
 # Take the first two parts
-desired_part = '/'.join(path_parts[:3])
-parts = component.split("_", 1)  # Split the string into two parts at the first underscore
+#desired_part = '/'.join(path_parts[:3])
+home_path = str(pathlib.Path.home())
+parts = components[-2].split("_", 1)  # Split the string into two parts at the first underscore
 new_component = parts[0] +'_header_'+ parts[1]
 
-file_name = os.path.join(desired_part,new_component+".txt")
+#file_name = os.path.join(desired_part,new_component+".txt")
+file_name = os.path.join(home_path, new_component+".txt")
 
 print(file_name)
-df_combined.to_csv(file_name, sep=';', index=False)
+df_combined.to_csv(file_name, sep=';', index=False, na_rep='nan')
