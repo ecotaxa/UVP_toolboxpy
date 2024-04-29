@@ -42,16 +42,16 @@ create metadata for a UVP MOORING project by processing data files stored in a s
 
 ### Invite the user to specify the project, the latitude, longitude to execute
 
-When you will execute UVP6_create_meta.py a message will prompt you to provide the path of a UVP project with the longitude and latitude acquisition. The project should be organised as a standard UVP6 project, with a "raw" folder that includes different Merged.txt created from the script above UVP6_time_merge. 
+When you will execute UVP6_create_meta.py a message will prompt you to provide the path of a UVP project with the longitude and latitude acquisition. The project should be organised as a standard UVP6 project, with a "raw" folder that includes different Merged.txt created from the script above UVP6_time_merge. The project metadata and the UVP6 HW_conf must be present in the config folder of the project.
 
 ### Extracting Depth and Station ID
-we will extract depth and station ID from the folder path. The user should make sure that all the information needed are in the path or in the *.txt of folder config of the UVP
+we will extract depth and station ID from the folder path, or with user input. The user should make sure that all the information needed are in the path or in the *.txt of folder config of the UVP
 
 ### Processing Data Files
-The script searches for data files (*Merged_data.txt) in the specified folder, parses these files to extract relevant information like the filename, profile ID, and sample datetime. it also calculates the number of images in each .txt (end image number). In the end, it will create a DataFrame with this information, and classify it based on the datetime. 
+The script searches for data files (*Merged_data.txt) in the specified folder, parses these files to extract relevant information like the filename, profile ID, and sample datetime. It also calculates the number of images in each .txt (end image number). In the end, it will create a DataFrame with this information, and classify it based on the datetime. 
 
 ### Storing the meta file 
-The new datatxt will be named like "'uvp6_header_NAMEOFTHEPROJECT.txt". For now it is stored in your own repository and should be then moved manually to your project, in the meta file (this feature will be updated soon). 
+The new datatxt will be named like "'uvp6_header_NAMEOFTHEPROJECT.txt". For now it is stored in your home repository and should be then moved manually to your project, in the meta file (this feature will be updated soon). 
 
 
 
