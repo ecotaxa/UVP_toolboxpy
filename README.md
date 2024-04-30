@@ -9,7 +9,7 @@ git clone git@github.com:ecotaxa/UVP_toolboxpy.git
 ```
 Launch time_merge/format_time_series_project.py
 ```
-/usr/bin/pyton UVP6_time_merge/time_merge/format_time_series_project.py
+/usr/bin/python UVP6_time_merge/time_merge/format_time_series_project.py
 ```
 Look at your terminal to give the input needed (input folder, start date time, time step, output folder)
 
