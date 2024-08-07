@@ -25,7 +25,7 @@ ship='mooring'
 #from youre home directory
 path_to_look_at = input("Enter the path of the folder where the data.txt to merged are stored: ")
 
-# example of path_to_look_at /home/jhabib/plankton/uvp6_missions/uvp6_sn000123lp/uvp6_sn000123lp_2021_23W0N_830m/raw/ 
+# example of path_to_look_at /home/jhabib/plankton/uvp6_missions/uvp6_sn000123lp/uvp6_sn000123lp_2021_23W0N_830m/raw
 
 
 print("\nChecking the dates from your data in: ", path_to_look_at)
@@ -58,7 +58,13 @@ if constantdepth is not None:
     print("\nDepth:", constantdepth)
 else:
     print("\nDepth not found in the path, you should add it manually.")
-    constantdepth = float(input("Enter the depth of the samples : "))
+    depth_input = input("Enter the depth of the samples : ")
+    try:
+        constantdepth = float(depth_input)
+    except:
+        print("\nNo valid depth input: no constant depth for those samples")
+        constantdepth = np.nan
+
 
     
 # Find the component containing 'uvp6_sn' and extract the relevant part
