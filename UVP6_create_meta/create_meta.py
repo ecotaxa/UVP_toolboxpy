@@ -23,7 +23,7 @@ ship='mooring'
 
 #you should add the path without ' '  and until folder raw where the merged file are present
 #from youre home directory
-path_merged_data = input("Enter the path of the folder where the merged merged de stored: ")
+path_merged_data = input("Enter the path of the folder where the merged data is stored: ")
 
 # example of path_to_look_at /home/jhabib/plankton/uvp6_missions/uvp6_sn000123lp/uvp6_sn000123lp_2021_23W0N_830m/raw
 
@@ -240,10 +240,11 @@ df_combined['endimg'] = df_combined['endimg'].astype(int)
 ####Create text file 
 #save the combined file in your folder on the server 
 home_path = str(pathlib.Path.home())
-parts = splited_path_merged_data[-2].split("_", 1)  # Split the string into two parts at the first underscore
-new_component = parts[0] +'_header_'+ parts[1]
+uvp_project_name = os.path.split(path_uvp_project)[1]
+parts = uvp_project_name.split("_", 1)  # Split the string into two parts at the first underscore
+file_name = parts[0] +'_header_'+ parts[1] + ".txt"
 
-file_name = os.path.join(home_path, new_component+".txt")
+file_path = os.path.join(home_path, file_name)
 
-print(file_name)
-df_combined.to_csv(file_name, sep=';', index=False, na_rep='nan')
+print(file_path)
+df_combined.to_csv(file_path, sep=';', index=False, na_rep='nan')
