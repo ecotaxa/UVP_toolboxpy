@@ -23,14 +23,14 @@ ship='mooring'
 
 #you should add the path without ' '  and until folder raw where the merged file are present
 #from youre home directory
-path_to_look_at = input("Enter the path of the folder where the data.txt to merged are stored: ")
+path_merged_data = input("Enter the path of the folder where the merged merged de stored: ")
 
 # example of path_to_look_at /home/jhabib/plankton/uvp6_missions/uvp6_sn000123lp/uvp6_sn000123lp_2021_23W0N_830m/raw
 
 
-print("\nChecking the dates from your data in: ", path_to_look_at)
-if not path.isdir(path_to_look_at) :
-    print("This path does not exists :", path_to_look_at)
+print("\nChecking the dates from your data in: ", path_merged_data)
+if not path.isdir(path_merged_data) :
+    print("This path does not exists :", path_merged_data)
 
 #insert lat, lon 
 print("\nLongitude positive to Est, Latitude positive to North")
@@ -42,14 +42,15 @@ latitude = float(input("Enter the latitude of the mooring, beware if it's negati
 #latitude=0.00  
 
 #determine constantdepth from the name of the file 
-# Split the path by '/'
-components = path_to_look_at.split('/')
+# the name of the uvp6 project must finish by the depth and "m" as in "_37m"
+# Split the path by '/' or '\'
+splited_path_merged_data = os.path.split(path_merged_data)
 
-# Iterate through the components to find the depth
+# Iterate through the components of the path to find the depth
 constantdepth = None
-for component1 in components:
-    if component1.endswith("m"):
-        depth_str = component1[:-1]  # Remove 'm'
+for part_path in splited_path_merged_data:
+    if part_path.endswith("m"):
+        depth_str = part_path[:-1]  # Remove 'm'
         depth_parts = depth_str.split('_')
         constantdepth = int(depth_parts[-1])
                 
@@ -67,11 +68,11 @@ else:
 
 
     
-# Find the component containing 'uvp6_sn' and extract the relevant part
+# Find the component of the path containing 'uvp6_sn' and extract the relevant part
 station_id = None
-for component in components:
-    if 'uvp6_sn' in component and component.endswith("m"):
-        station_id = '_'.join(component.split('_')[-2:])
+for path_part in splited_path_merged_data:
+    if 'uvp6_sn' in path_part and path_part.endswith("m"):
+        station_id = '_'.join(path_part.split('_')[-2:])
         break
 
 if station_id is not None:
@@ -83,8 +84,8 @@ else:
   
 
 #open the file of txt HW in config
-desired_part = os.path.dirname(path_to_look_at)  # Extract the parent directory one levels up
-path_config = os.path.join(desired_part, 'config')
+path_uvp_project = os.path.dirname(path_merged_data)  # Extract the parent directory one levels up
+path_config = os.path.join(path_uvp_project, 'config')
 
 
 path_tree = pathlib.Path(path_config)
@@ -131,7 +132,7 @@ for input_file_path in cruise_string:
                 cruise_value = line.split('=')[1].strip()
 
                 
-path_tree = pathlib.Path(path_to_look_at)
+path_tree = pathlib.Path(path_merged_data)
 data_txt_list = path_tree.rglob("*Merged_data.txt")
 data_txt_string = [str(file_path) for file_path in data_txt_list]
 
@@ -238,15 +239,10 @@ df_combined['endimg'] = df_combined['endimg'].astype(int)
 
 ####Create text file 
 #save the combined file in your folder on the server 
-# Split the path by '/'
-path_parts = path_to_look_at.split('/')
-# Take the first two parts
-#desired_part = '/'.join(path_parts[:3])
 home_path = str(pathlib.Path.home())
-parts = components[-2].split("_", 1)  # Split the string into two parts at the first underscore
+parts = splited_path_merged_data[-2].split("_", 1)  # Split the string into two parts at the first underscore
 new_component = parts[0] +'_header_'+ parts[1]
 
-#file_name = os.path.join(desired_part,new_component+".txt")
 file_name = os.path.join(home_path, new_component+".txt")
 
 print(file_name)
