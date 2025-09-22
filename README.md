@@ -1,5 +1,10 @@
-# UVP6_time_merge
-Merge different acquisition sequences on a constant time step.
+# UVP_toolboxpy
+
+Following a long acquisition with the UVP6, you may need to create samples grouping data by time or acquisition parameters. 
+The UVP_toolbox allows you to simplify these operations by running three scripts:
+-UVP6_convert_format/convert_uvp6_format2023.py to convert txt files to the appropriate 2021 format. 
+-UVP6_time_merge/time_merge/format_time_series_project.py to group the acquisitions.
+-UVP6_create_meta/create_meta.py to create the metadata dataframe associated with the grouped data.
 
 ## How to use it
 
@@ -7,11 +12,32 @@ Download this repo with git clone.
 ```
 git clone git@github.com:ecotaxa/UVP_toolboxpy.git
 ```
-Launch time_merge/format_time_series_project.py
+Launch the different scripts like time_merge/format_time_series_project.py
 ```
 /usr/bin/python UVP6_time_merge/time_merge/format_time_series_project.py
 ```
 Look at your terminal to give the input needed (input folder, start date time, time step, output folder)
+
+# UVP6_convert_format
+## What does it do ?
+Change the metaline format of some data.txt from 2023 to fit the 2021 format.
+
+### Invite the user to specify the data to be formatted
+
+When you will execute convert_uvp6_fromat 2023 a message will prompt you to provide the path of the the raw folder with the old formated files to be converted.
+
+### Conversion of all original datatxt in the folders inside the raw folder provided.
+
+There is a saving and an archiving of the original data.txt to [...]_2023format.txt
+Then, the script read the data text file from uvp6 and cchange the hwconf line and the acq line and add parameters to fit the old format.
+
+### Each new file is copied in the same folder of the original file.
+
+In each folder you will find the original file in the 2023 format as well as the new file in the old 2021 format saved as *data.txt.
+
+
+# UVP6_time_merge
+Merge different acquisition sequences on a constant time step.
 
 ## What does it do ?
 
@@ -51,7 +77,5 @@ we will extract depth and station ID from the folder path, or with user input. T
 The script searches for data files (*Merged_data.txt) in the specified folder, parses these files to extract relevant information like the filename, profile ID, and sample datetime. It also calculates the number of images in each .txt (end image number). In the end, it will create a DataFrame with this information, and classify it based on the datetime. 
 
 ### Storing the meta file 
-The new datatxt will be named like "'uvp6_header_NAMEOFTHEPROJECT.txt". For now it is stored in your home repository and should be then moved manually to your project, in the meta file (this feature will be updated soon). 
-
-
+The new datatxt will be named like "'uvp6_header_NAMEOFTHEPROJECT.txt". For now it is stored in your home repository and should be then moved manually to your project, in the meta file. However, if you use the create_meta-Copy.py script the datatxt will be stored directly in the meta file.
 

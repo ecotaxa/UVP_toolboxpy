@@ -111,7 +111,7 @@ def convert_all_uvp6(root_folder):
 # Call
 # ===========================
 if __name__ == "__main__":
-    data_root = input("Enter the path of the raw folder with the old format to be convert:")
+    data_root = input("Enter the path of the raw folder with the old format to be converted:")
     # example of path_to_look_at /home/jhabib/plankton/uvp6_missions/uvp6_sn000123lp/uvp6_sn000123lp_2021_23W0N_830m/raw
     convert_all_uvp6(data_root)
     log_message("🎉 All files processed.")
