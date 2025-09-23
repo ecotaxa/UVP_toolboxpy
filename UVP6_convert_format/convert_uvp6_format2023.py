@@ -74,7 +74,7 @@ def from2023format_to_old_uvp_data(file_path: Path):
         # Modify HWline
         HW_parts = HWline.split(',') if HWline else []
         if len(HW_parts) >= 13:
-            HW_parts = HW_parts[:7] + ['0'] + HW_parts[7:13] + ['193.49.112.100'] + HW_parts[13:-1]
+            HW_parts = HW_parts[:7] + ['0'] + HW_parts[7:13] + ['193.49.112.100'] + HW_parts[13:]
         new_HWline = ','.join(HW_parts) if HW_parts else HWline
 
         # Modify ACQline
@@ -84,13 +84,18 @@ def from2023format_to_old_uvp_data(file_path: Path):
         new_ACQline = ','.join(ACQ_parts) if ACQ_parts else ACQline
 
         # Write the new file
+        rebuilt_lines = []
+        if new_HWline:
+            rebuilt_lines.append(new_HWline)
+#        if line_sep:  # typiquement un ";"
+#            rebuilt_lines.append(line_sep)
+        if new_ACQline:
+            rebuilt_lines.append(new_ACQline)
+
+        rebuilt_lines.extend(new_lines[2:])
+
         with open(file_path, 'w') as f:
-            if new_HWline: f.write(new_HWline + ';\n')
-            if line_sep: f.write(line_sep + '\n')
-            if new_ACQline: f.write(new_ACQline + '\n')
-            # Écrire les lignes restantes
-            for line in new_lines[4:]:
-                f.write(line + '\n')
+            f.write("\n".join(rebuilt_lines) + "\n")
 
         log_message(f"✅ Converted: {file_path} (original saved as {old_file_path})")
 
