@@ -86,13 +86,13 @@ def from2023format_to_old_uvp_data(file_path: Path):
         # Write the new file
         rebuilt_lines = []
         if new_HWline:
-            rebuilt_lines.append(new_HWline)
+            rebuilt_lines.append(new_HWline + "\n")
 #        if line_sep:  # typiquement un ";"
 #            rebuilt_lines.append(line_sep)
         if new_ACQline:
             rebuilt_lines.append(new_ACQline)
 
-        rebuilt_lines.extend(new_lines[2:])
+        rebuilt_lines.extend(new_lines[3:])
 
         with open(file_path, 'w') as f:
             f.write("\n".join(rebuilt_lines) + "\n")
