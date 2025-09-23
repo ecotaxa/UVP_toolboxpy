@@ -165,3 +165,4 @@ tests/test_functions.py
 
 ## Ignore all .log files
 *.log
+*log.txt
