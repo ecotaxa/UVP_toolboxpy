@@ -2,6 +2,7 @@
 
 Following a long acquisition with the UVP6, you may need to create samples grouping data by time or acquisition parameters. 
 The UVP_toolbox allows you to simplify these operations by running three scripts:
+-UVP6_start_process/start_processing_new_data.py copy the folders to be processed into the raw folder for the next steps
 -UVP6_convert_format/convert_uvp6_format2023.py to convert txt files to the appropriate 2021 format. 
 -UVP6_time_merge/time_merge/format_time_series_project.py to group the acquisitions.
 -UVP6_create_meta/create_meta.py to create the metadata dataframe associated with the grouped data.
@@ -17,6 +18,25 @@ Launch the different scripts like time_merge/format_time_series_project.py
 /usr/bin/python UVP6_time_merge/time_merge/format_time_series_project.py
 ```
 Look at your terminal to give the input needed (input folder, start date time, time step, output folder)
+
+# UVP6_start_process
+## What does it do ?
+Allow you to copy the downloaded data folder into the raw folder in the prokect where the new data can be processed.
+
+### User has to specify the path to the dowloaded file and the raw file
+Indicate where both files are located
+
+### Choose to erase the raw folder content
+
+If you want to work on new data to be processed you should erase the content of the raw folder that have already been archived
+However, if want to process multiple downloaded data at the same time, you have to do muiltiple copy without erasing the raw folder$
+
+### Unconcatenate folders by day. 
+The data downloaded from the UVP6 are presented as "2025.05" which means "the fifth download of 2025",
+inside which you can find sub-folders name "09-11, 09-12, 09-13, 09-14, 09-15, 09-16, 09-17...", each corresponding to an acquisition day.
+In order to process the downloaded data are copied in the raw folder of the project without the grouping by day.
+
+Note that the same folder (with a format "20250907-090000") , won't be copy twice to avoid duplicates. 
 
 # UVP6_convert_format
 ## What does it do ?
