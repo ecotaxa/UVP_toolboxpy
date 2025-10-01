@@ -8,18 +8,18 @@ from os import path
 from tqdm import tqdm
 from usr_input import PathInput
 import zipfile
-from functions import extract_date
-from functions import append_files
+from functionsv2 import extract_date
+from functionsv2 import append_files
 from usr_input import StartInput
 from usr_input import StepInput
-from functions import split_data
-from functions import write_splitted_data
-from functions import read_acq
-from functions import check_acq
-from functions import init_folders
-from functions import acq_sort
-from functions import vig_move
-from functions import copy_tree_safe
+from functionsv2 import split_data
+from functionsv2 import write_splitted_data
+from functionsv2 import read_acq
+from functionsv2 import check_acq
+from functionsv2 import init_folders
+from functionsv2 import acq_sort
+from functionsv2 import vig_move
+from functionsv2 import copy_tree_safe
 
 # -----------------------------
 # User parameters
@@ -122,22 +122,26 @@ for i in new_folder:
 # ---------------------------------------
 # Copy vignettes into the Merged folders
 # ---------------------------------------
-
-#Now we check all the "merged" folder and copy the vignettes inside
-proj_parent = pathlib.Path(path_to_look_at).parent.absolute()
-merged_data_txt_list = proj_parent.rglob("*Merged_data.txt")
+print(f"\n Copying vignettes into new folders")
 
 #Unzip image folders
 print(f"Unziping images...")
-path_tree = pathlib.Path(path_to_look_at)
-zip_list = path_tree.rglob("*.zip")
-for file_path in zip_list:
+base_path = pathlib.Path(path_to_look_at)
+zip_list = list(base_path.rglob("*.zip"))
+for file_path in tqdm(zip_list, desc="Unzipping"):
     with zipfile.ZipFile(file_path, 'r') as zip_ref:
-        zip_ref.extractall(file_path.parents[0])
-vig_list = path_tree.rglob("*.vig")
-vig_string = [str(file_path) for file_path in vig_list]
+        zip_ref.extractall(file_path.parent)
+
+#Create vignettes index
+print("Indexation of the vignettes...")
+vig_list = list(base_path.rglob("*.vig"))
+vig_string = [str(v) for v in vig_list]
+
+vig_index = build_vig_index(vig_string)
+
+#Now we check all the "merged" folder and copy the vignettes inside
+merged_data_txt_list = list(base_path.rglob("*Merged_data.txt"))
 
 #Copy corresponding vignettes into sequences folder
-print(f"\n Copying vignettes into new folders")
-for datatxt_merged in tqdm(merged_data_txt_list):
-    vig_move(datatxt_merged, vig_string)
+for data_txt in tqdm(merged_data_txt_list, desc="Processing Merged_data.txt"):
+    vig_move_indexed(data_txt, vig_index)
