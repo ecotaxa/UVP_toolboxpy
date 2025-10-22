@@ -18,7 +18,7 @@ from functionsv2 import read_acq
 from functionsv2 import check_acq
 from functionsv2 import init_folders
 from functionsv2 import acq_sort
-from functionsv2 import vig_move
+from functionsv2 import vig_move_indexed
 from functionsv2 import copy_tree_safe
 
 # -----------------------------
@@ -32,6 +32,7 @@ from functionsv2 import copy_tree_safe
 # -----------------------------
 # Checking available data
 # -----------------------------
+path_to_look_at = PathInput()
 print("\nChecking the dates from your data in: ", path_to_look_at)
 if not path.isdir(path_to_look_at):
     raise FileNotFoundError(f"This path does not exist: {path_to_look_at}")
@@ -104,7 +105,7 @@ for i in new_folder:
 
     #Ask for the time step
     print(f"\nFor the config in {path.split(i)[-1]}")
-   step_input = StepInput()
+    step_input = StepInput()
 
     #Split the long data
     splitted_data = split_data(my_data, step_input, start_input)
