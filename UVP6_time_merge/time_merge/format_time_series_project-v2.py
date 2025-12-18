@@ -20,14 +20,15 @@ from functionsv2 import init_folders
 from functionsv2 import acq_sort
 from functionsv2 import vig_move_indexed
 from functionsv2 import copy_tree_safe
+from functionsv2 import build_vig_index
 
 # -----------------------------
 # User parameters
 # -----------------------------
 
-#path_to_look_at = "/home/ecoicaud/plankton_rw/uvp6_missions/uvp6_sn000237lp/uvp6_sn000237lp_2024_anerissmartbay/raw"  
-#start_input = "20250208-000000"
-#step_input = "24"  # heures
+#path_to_look_at = "/home/ecoicaud/plankton/uvp6_missions/uvp6_sn000237lp/uvp6_sn000237lp_2024_anerissmartbay/raw"
+#start_input = "20250108-000000"
+step_input = "24"  # heures
 
 # -----------------------------
 # Checking available data
@@ -63,7 +64,7 @@ print(f"\nYou have data that goes from: {min_date_str} to: {max_date_str}")
 # Copy folders to be merged
 # -----------------------------
 
-#Ask when the user wants to start 
+#Ask when the user wants to start
 start_input = StartInput()
 start_input_obj = datetime.strptime(start_input, "%Y%m%d-%H%M%S")
 
@@ -81,7 +82,7 @@ if result:
     for column, values in result.items():
         unique_values = set(values)
         print(f"{column}: {unique_values}")
-    
+
 else:
     print("All columns have constant values.")
 
@@ -105,7 +106,7 @@ for i in new_folder:
 
     #Ask for the time step
     print(f"\nFor the config in {path.split(i)[-1]}")
-    step_input = StepInput()
+    #step_input = StepInput()
 
     #Split the long data
     splitted_data = split_data(my_data, step_input, start_input)
@@ -114,7 +115,7 @@ for i in new_folder:
 
     print(f"Total Number of Time Steps: {num_time_steps}")
 
-    #Decide the output folder 
+    #Decide the output folder
     output_folder = i
 
     #Save all data txt in the folder
@@ -127,7 +128,7 @@ print(f"\n Copying vignettes into new folders")
 
 #Unzip image folders
 print(f"Unziping images...")
-base_path = pathlib.Path(path_to_look_at)
+base_path = pathlib.Path(path_to_look_at).parent
 zip_list = list(base_path.rglob("*.zip"))
 for file_path in tqdm(zip_list, desc="Unzipping"):
     with zipfile.ZipFile(file_path, 'r') as zip_ref:
@@ -146,3 +147,5 @@ merged_data_txt_list = list(base_path.rglob("*Merged_data.txt"))
 #Copy corresponding vignettes into sequences folder
 for data_txt in tqdm(merged_data_txt_list, desc="Processing Merged_data.txt"):
     vig_move_indexed(data_txt, vig_index)
+
+print("\n✅ Processing complete — all Merged folders created and vignettes copied successfully!")

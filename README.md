@@ -82,6 +82,20 @@ Once we are sure that our raw folders have the same acquisition parameters we ca
 Finally, the vig will be copied from the old raw folder, based on the different dates of the merged_data.txt dates.
 
 
+
+# UVP6_copy_to_good_project
+## What does it do ?
+Allow you move the merged_folders into the appropriate project folder if they aren't already in the good one. 
+
+### Invite the user to specify the folder where the *_Merged folders are stored and the folder where they are supposed to be moved to
+When you will execute UVP6_copy_to_good_project.py a message will prompt you to provide the path of the source folders with the files to copy. It should be a raw or raw_a,b... where the merged folders are stored. If you want to copy them in the appropriate Project folder give the path to the 
+associated "raw" folder.
+
+### Copy of the *_Merged folder 
+The folders will be copy entirely in the right folder if they aren't already present. 
+
+
+
 # UVP6_create_meta
 ## What does it do ?
 create metadata for a UVP MOORING project by processing data files stored in a specified folder. Here's a breakdown of what the script does:

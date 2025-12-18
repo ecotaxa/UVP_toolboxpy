@@ -156,37 +156,38 @@ def read_acq(uvp6_files):
     acq_df = pd.concat(acq_list, ignore_index = True)
     return(acq_df)
 
-def extract_data_dates(data_txt, skip_lines = 3):
-    """Extract all the datetime of a data txt.
+def extract_data_dates(data_txt, skip_lines=3):
+    """
+    Extract all the datetime strings from a Merged_data.txt file.
 
     Args:
-        data_txt (string): Path of your data txt
-        skip_lines (int, optional): _description_. Defaults to 3. The number of lines to skip (hw and acq conf)
+        data_txt (str or Path): Path to the data txt
+        skip_lines (int): Number of header lines to skip (default 3)
 
     Returns:
-        list: A list of date time string
-    """    
-    #Initiate the date time list
+        list: List of datetime strings (without the last "-X" suffix)
+    """
     datetime_list = []
 
-    with open(data_txt, 'r') as file:
+    with open(data_txt, 'r') as f:
+        # Skip header lines
         for _ in range(skip_lines):
-            # Skip the specified number of lines
-            next(file)
+            next(f)
 
-        for line in file:
-            # Ignore empty lines
-            if not line.strip():
+        for line in f:
+            line = line.strip()
+            if not line:  # ignore empty lines
                 continue
 
-            # Split the line using ',' as a delimiter
-            line_parts = line.split(',')
-            
-            # Extract the datetime string from the first part
-            datetime_str = line_parts[0]
-            datetime_list.append(datetime_str)
+            if line.startswith(("HW_CONF", "ACQ_CONF")):
+                continue  # skip any header lines in the middle
+
+            # Extract datetime (first element before ',') 
+            dt = line.split(',')[0]
+            datetime_list.append(dt)
 
     return datetime_list
+
 
 def check_acq(acq_data):
     """Check in a dataframe of acquisition parameters, which one is not constant.
@@ -284,31 +285,39 @@ def copy_tree_safe(src, dst):
 
 def acq_sort(acq_data_with_folder, path_input):
     """
-    Copy data txt to a new folder organization
+    Copy data txt to a new folder organization.
 
     Args:
         acq_data_with_folder (dataframe): The acq dataframe with folder column (output from init_folders)
         path_input (string): The original project
     """     
-    for index, row in tqdm(acq_data_with_folder.iterrows()):
+    for index, row in tqdm(acq_data_with_folder.iterrows(), total=len(acq_data_with_folder)):
         datetime_str = row['datetime']
         closest_folder = row['folder']
 
         source_path = os.path.join(path_input, datetime_str)
         destination_folder = os.path.join(closest_folder, datetime_str)
+        new_folder = destination_folder + '_UsedForMerge'  # ← définie ici directement
 
+        # Crée le dossier destination si besoin
         if not os.path.exists(destination_folder):
             os.makedirs(destination_folder)
 
+        # Copie les fichiers
         copy_tree_safe(source_path, destination_folder)
 
-        #Rename old folder and data.txt with "_UsedForMerge"
-        os.rename(destination_folder, destination_folder + '_UsedForMerge')
-        path_tree = pathlib.Path(destination_folder + '_UsedForMerge')
-        datafile_list = path_tree.rglob("*_data.txt")
-        for file_path in datafile_list:
-            os.rename(str(file_path), str(file_path)[0:-9] + '_UsedForMerge' + str(file_path)[-9:])
+        # Renomme le dossier si pas déjà fait
+        if not os.path.exists(new_folder):
+            os.rename(destination_folder, new_folder)
 
+        # Renommer les fichiers *_data.txt en *_UsedForMerge_data.txt
+        path_tree = pathlib.Path(new_folder)
+        for file_path in path_tree.rglob("*_data.txt"):
+            new_name = str(file_path)[:-9] + '_UsedForMerge' + str(file_path)[-9:]
+            if not os.path.exists(new_name):
+                os.rename(str(file_path), new_name)
+
+                
 
 def build_vig_index(vig_string):
     """
