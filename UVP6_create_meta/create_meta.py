@@ -133,7 +133,7 @@ for input_file_path in cruise_string:
 
                 
 path_tree = pathlib.Path(path_merged_data)
-data_txt_list = path_tree.rglob("*Merged_data.txt")
+data_txt_list = path_tree.rglob("*Merged*_data.txt")
 data_txt_string = [str(file_path) for file_path in data_txt_list]
 
 file_header = ['cruise','ship','filename','profileid','bottomdepth','ctdrosettefilename'	,'latitude',	'longitude',	'firstimage',
