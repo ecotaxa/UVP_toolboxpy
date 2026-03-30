@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uvptoolbox"
+version = "0.0.1"
+requires-python = ">=3.11"
+description = "Command-line toolbox to preprocess UVP data"
+license = "GPL-3.0-or-later"
+readme = "README.md"
+authors = [{name = "Camille Sant"}]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Bio-Informatics"
+]
+dependencies = [
+    "click>=8.0"
+]
+
+[tool.setuptools.packages.find]
+include = ["uvptoolbox*"]
+
+[project.scripts]
+uvptoolbox = "uvptoolbox.cli:main"
+
