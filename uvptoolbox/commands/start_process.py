@@ -1,104 +1,111 @@
-# The data downloaded from the UVP6 are presented as "2025.05" which means "the fifth download of 2025",
-# inside which you can find sub-folders name "09-11, 09-12, 09-13, 09-14, 09-15, 09-16, 09-17..." 
-#each corresponding to an acquisition day. 
-
-# In order to process the data you should copy the downloaded files in the raw folder of the project without the 
-# grouping by day.
-
-# First you can choose to erase the files within the raw folder if they have been previously processed
-# Secondly you can copy the dowloaded folders to be processed. If a folder is already copy it won't be copy twice 
-# Because it is set-up as "Overwritting= False" to avoid conflicts, but you can change this parameter. 
-
-
-import os 
 import shutil
 from pathlib import Path
+from uvptoolbox.utils import setup_logger, find_acquisition_folders, copy_acquisition_folder
 
-from datetime import datetime
+def empty_folder(folder_path: Path):
+    """ Empty a folder of the project or create it if it doesn't exist """
 
-LOG_FILE = "process_log.txt"
+    # Create the folder if it does not already exist
+    folder_path.mkdir(parents=True, exist_ok=True)
 
-def log_message(message):
-    """Écrit un message dans un fichier log avec un timestamp"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    with open(LOG_FILE, "a") as logf:
-        logf.write(f"[{timestamp}] {message}\n")
-
-def actualise_raw_folder(download_folder: str, project_folder: str):
-    """
-    - Empty the 'raw' folder of the project
-    - Copy the contents of the daily subfolders to 'raw'
-    """
-    download_path = Path(download_folder)
-    if not download_path.exists():
-        raise FileNotFoundError(f"File {download_folder} does not exist") 
-
-    raw_path = Path(project_folder) / "raw"
-    raw_path.mkdir(parents=True, exist_ok=True)
-
-    ask_delete = input("Do you want to delete the raw content ? (y/n)")
-
-    # Empty raw content (not the folder) if asked to
-    if ask_delete.lower() == "y":
-        for item in raw_path.iterdir():
-            if item.is_file():
-                item.unlink()
-            elif item.is_dir():
-                shutil.rmtree(item)
-            log_message(f"🗑️ Content of {raw_path} deleted")
-        print(f"🗑️ Content of {raw_path} deleted")
-    else:
-        print("⚠️ raw stay untouched")   
-
-def copy_to_raw(src_dir: Path, raw_path: Path, overwrite=False):
-    """
-    Copy sub-folders from src_dir into raw_path.
-    If overwrite=False, skip any folder already present.
-    """
-    counters = {"copied": 0, "skipped": 0}
-
-    for sub in src_dir.iterdir():
-        dest = raw_path / sub.name
-        if sub.is_dir():
-            if dest.exists() and not overwrite:
-                log_message(f"⚠️ Skipped folder (already exists): {dest}")
-                counters["skipped"] += 1
-            else:
-                for root, _, files in os.walk(sub):
-                    rel_path = os.path.relpath(root, sub)
-                    target_dir = dest / rel_path
-                    target_dir.mkdir(parents=True, exist_ok=True)
-                    for file in files:
-                        src_file = Path(root) / file
-                        dst_file = target_dir / file
-                        shutil.copyfile(src_file, dst_file)
-                        log_message(f"✅ Copied file: {dst_file}")
-                        counters["copied"] += 1
-                log_message(f"📂 Processed directory: {dest}")
-
-        elif sub.is_file():
-            if dest.exists() and not overwrite:
-                log_message(f"⚠️ Skipped file (already exists): {dest}")
-                counters["skipped"] += 1
-            else:
-                shutil.copyfile(sub, dest)
-                log_message(f"✅ Copied file: {dest}")
-                counters["copied"] += 1
-
-    print(f"✅ Copy finished for {sub.name}: {counters['copied']} files copied, {counters['skipped']} skipped")
+    # Empty content (not the folder)
+    for item in folder_path.iterdir():
+        if item.is_file():
+            item.unlink()
+        elif item.is_dir():
+            shutil.rmtree(item)
 
 
-# ======================
-# Call
-# ======================
-if __name__ == "__main__":
-    download_folder = Path(input("Path to the downloaded folder:"))
-    project_folder = Path(input("Path to the project folder:"))
+def read_acquisitions_to_skip(file: Path) -> set[str]:
+    """Read the set of acquisition folder names to not process."""
+    if not file.exists():
+        return set()
+
+    with open(file, "r") as f:
+        return {line.strip() for line in f if line.strip()}
+
+
+def run(ctx, project_folder: Path,
+        input_folder : Path = None,
+        reset_work_dir : bool =False,
+        skip_some_acquisitions: bool = True,
+        acquisitions_to_skip_file: Path = None):
     
-    actualise_raw_folder(download_folder, project_folder)
+    """Prepare work/all and copy selected acquisition folders into it."""
+    logger = setup_logger("uvptoolbox.start_process", debug=ctx.obj.get("debug", False))
     
-    raw_path = Path(project_folder) / "raw"
-    for sub_dir in download_folder.iterdir():
-        if sub_dir.is_dir():
-            copy_to_raw(sub_dir, raw_path, overwrite=False)
+    # Check that we have access ton the raw input data
+    if input_folder is None:
+        input_folder = project_folder / "raw"
+    if not input_folder.exists():
+        logger.error("Raw input directory does not exist: %s", input_folder)
+        raise FileNotFoundError(f"Raw input directory does not exist: {input_folder}")
+
+    # Store the name of acquisition to skip (because they have already been processed for example) if needed
+    acq_to_skip = set()
+    if skip_some_acquisitions :
+        if acquisitions_to_skip_file is None:
+            acquisitions_to_skip_file = project_folder / "logs/processed_acquisitions.txt"
+        if acquisitions_to_skip_file.exists():
+            acq_to_skip = read_acquisitions_to_skip(acquisitions_to_skip_file)
+        else :
+            logger.warning("File containing the names of acquisitions to skip not found: %s", acquisitions_to_skip_file)
+            logger.warning("All acquisitions will be processed")
+
+    work_dir = project_folder / "work"
+    work_all_dir = work_dir / "all"
+    overwrite = ctx.obj.get("overwrite", False)
+
+    logger.info("Starting start-process")
+    logger.info("Project directory: %s", project_folder)
+    logger.info("Raw input directory: %s", input_folder)
+    logger.info("Work directory: %s", work_dir)
+    logger.info("Work directory reset: %s", reset_work_dir)
+    if not reset_work_dir:
+        logger.info("Overwriting already present acquisition: %s", overwrite)
+    if acq_to_skip :
+        logger.info("Skipping acquisitions: %s", ", ".join(acq_to_skip))
+
+    if reset_work_dir:
+        empty_folder(work_dir)
+        logger.info("Emptied work directory: %s", work_dir)
+    else :
+        work_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Prepared work directory: %s", work_dir)
+
+
+    work_all_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Prepared work/all directory: %s", work_all_dir)
+
+    acquisition_folders = find_acquisition_folders(input_folder)
+    if not acquisition_folders:
+        logger.warning("No acquisition folders found in %s", input_folder)
+        return
+    if acq_to_skip:
+        acquisition_folders = [folder for folder in acquisition_folders if folder.name not in acq_to_skip]
+    if not acquisition_folders:
+        logger.info("No new acquisition folders to process")
+        return
+
+    logger.info("Found %d acquisition folders to process", len(acquisition_folders))
+
+    counters = {"copied": 0, "skipped": 0, "replaced": 0}
+
+    for folder in acquisition_folders:
+        result = copy_acquisition_folder(folder, work_all_dir, logger=logger, overwrite=overwrite)
+        counters[result] += 1
+
+    logger.info(
+        "Acquisitions import completed: %d copied, %d skipped, %d replaced",
+        counters["copied"],
+        counters["skipped"],
+        counters["replaced"],
+    )
+
+    logger.info("Finished start-process")
+
+
+    
+    
+        
 
