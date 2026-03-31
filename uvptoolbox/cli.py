@@ -53,6 +53,21 @@ def start_process_cmd(ctx, project, input_folder, reset_work_dir, skip_processed
                        skip_some_acquisitions=skip_processed, acquisitions_to_skip_file=acquisitions_to_skip_file)
 
 
+
+@cli.command(name="convert-format")
+@click.option("--data-dir", type=click.Path(exists=True, path_type=Path),default=None,
+              help="Directory containing UVP data files to convert.")
+@click.option("--project", type=click.Path(exists=True, path_type=Path),default=None,
+              help="Project directory. If data-dir is not provided, it is set to <project>/work/all.")
+@click.pass_context
+def convert_format_cmd(ctx, data_dir, project):
+    """Convert UVP data.txt files from 2023 format to the 2021 format expected downstream."""
+    from uvptoolbox.commands import convert_format
+    if project is None and data_dir is None:
+        raise click.UsageError("You must provide either --project or --data-dir.")
+    convert_format.run( ctx, project_folder=project, data_dir=data_dir)
+
+
 def main(argv=None):
     cli(prog_name="uvptoolbox", args=argv)
 

@@ -34,7 +34,7 @@ def run(ctx, project_folder: Path,
     """Prepare work/all and copy selected acquisition folders into it."""
     logger = setup_logger("uvptoolbox.start_process", debug=ctx.obj.get("debug", False))
     
-    # Check that we have access ton the raw input data
+    # Check that we have access to the raw input data
     if input_folder is None:
         input_folder = project_folder / "raw"
     if not input_folder.exists():
