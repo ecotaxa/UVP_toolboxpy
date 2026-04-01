@@ -2,7 +2,6 @@ from collections import defaultdict
 from pathlib import Path
 import pandas as pd
 from uvptoolbox.utils import setup_logger, copy_acquisition_folder
-import re
 import click
 
 
@@ -105,17 +104,18 @@ def copy_acquisitions_to_config_folders(acq_df, input_dir, logger, overwrite):
     for _, row in acq_df.iterrows():
         source =  input_dir/ row["datetime"]
         folder_name = row["folder_name"]
-        dest = Path(row["folder"]) / f"{row['datetime']}_UsedForMerge" 
+        dest = Path(row["folder"]) / source.name
+        #dest = Path(row["folder"]) / f"{row['datetime']}_UsedForMerge" 
 
         status = copy_acquisition_folder(source, dest, logger, overwrite)
         counters[folder_name][status] += 1
 
-        for file in dest.rglob("*_data.txt"):
-            if re.match(r"^\d{8}-\d{6}_data\.txt$", file.name): # make sure we don't rename a file already named _UsedForMerge_data.txt
-                new_name = file.with_name(file.stem.replace("_data", "_UsedForMerge_data") + file.suffix)
-                if not new_name.exists() or overwrite:
-                    file.rename(new_name)
-                    counters[folder_name]["renamed_data_files"] += 1
+        #for file in dest.rglob("*_data.txt"):
+        #    if re.match(r"^\d{8}-\d{6}_data\.txt$", file.name): # make sure we don't rename a file already named _UsedForMerge_data.txt
+        #        new_name = file.with_name(file.stem.replace("_data", "_UsedForMerge_data") + file.suffix)
+        #        if not new_name.exists() or overwrite:
+        #            file.rename(new_name)
+        #            counters[folder_name]["renamed_data_files"] += 1
     return counters
 
 def write_detected_acquisition_configs(unique_configs, config_file, logger):
@@ -131,10 +131,6 @@ def run(ctx,
         output_dir: Path = None,
         config_file: Path = None):
     logger = setup_logger("uvptoolbox.acquisition_split", debug=ctx.obj.get("debug", False))
-
-    if project_folder is None and (input_dir is None or output_dir is None):
-        logger.error("Provided a project folder or both input and output folders")
-        raise ValueError("Provide either a project folder, or both input_dir and output_dir.")
 
     # Check that we have access to the data
     if input_dir is None :
@@ -199,12 +195,11 @@ def run(ctx,
 
     for folder_name, stats in counters.items():
         logger.info(
-            "  %s -> %d copied, %d skipped, %d replaced. %d data files renamed to 'UsedForMerge' for merge processing.",
+            "  %s -> %d copied, %d skipped, %d replaced.",
             folder_name,
             stats["copied"],
             stats["skipped"],
-            stats["replaced"],
-            stats["renamed_data_files"]
+            stats["replaced"]
         )
 
     logger.info("Finished acquisition-split")

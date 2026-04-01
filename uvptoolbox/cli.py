@@ -88,6 +88,35 @@ def acquisition_split_cmd(ctx, project, input_dir, output_dir, config_file):
     acquisition_split.run(ctx, project_folder=project, input_dir=input_dir, output_dir=output_dir, config_file=config_file)
 
 
+@cli.command(name="time-merge")
+@click.option("--data-dir", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Path to a folder containing acquisition folders to process.")
+@click.option("--project",type=click.Path(exists=True, path_type=Path),default=None,
+              help="Project directory. If data-dir is not provided, all folders in <project>/work/by_acquisition will be processed.")
+@click.option("--time-step",type=float,default=None,
+              help="Time step in hours used to merge and split data. "
+                   "Use either --time-step or --by-day.")
+@click.option("--by-day",is_flag=True,default=False,help="Merge acquisitions by day instead of using a fixed time step.")
+@click.option("--start-datetime", default=None,
+              help="Optional start datetime in format YYYYMMDD-HHMMSS. Acquisitions before this datetime are ignored. "
+                   "If not provided, the earliest datetime found in the data is used.")
+@click.pass_context
+def time_merge_cmd(ctx, data_dir, project, time_step, by_day, start_datetime):
+    """Merge acquisitions by time step or by day, and copy corresponding vignettes."""
+    from uvptoolbox.commands import time_merge
+
+    if project is None and data_dir is None:
+        raise click.UsageError("You must provide either --project or --data-dir.")
+
+    if by_day and time_step is not None:
+        raise click.UsageError("Use either --by-day or --time-step, not both.")
+
+    if not by_day and time_step is None:
+        raise click.UsageError("You must provide either --by-day or --time-step.")
+
+    time_merge.run(ctx, project_folder=project, data_dir=data_dir, start_datetime=start_datetime, time_step=time_step, by_day=by_day)
+
+
 def main(argv=None):
     cli(prog_name="uvptoolbox", args=argv)
 
