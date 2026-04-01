@@ -33,9 +33,8 @@ def find_acquisition_folders(source_root: Path) -> list[Path]:
     return sorted(acquisition_folders)
 
 
-def copy_acquisition_folder(src: Path, dest_root: Path, logger: logging.Logger, overwrite: bool = False ) -> str:
-    """Copy one acquisition folder into dest_root. Returns: 'copied', 'skipped', or 'replaced' """
-    dest = dest_root / src.name
+def copy_acquisition_folder(src: Path, dest: Path, logger: logging.Logger, overwrite: bool = False ) -> str:
+    """Copy one acquisition folder src to dest. Returns: 'copied', 'skipped', or 'replaced' """
 
     if dest.exists():
 

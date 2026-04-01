@@ -68,6 +68,26 @@ def convert_format_cmd(ctx, data_dir, project):
     convert_format.run( ctx, project_folder=project, data_dir=data_dir)
 
 
+@cli.command(name="acquisition-split")
+@click.option("--input-dir", type=click.Path(exists=True, path_type=Path),default=None,
+              help="Input directory containing acquisition folders to split.")
+@click.option("--output-dir", type=click.Path(path_type=Path),default=None,
+              help="Output directory where one folder per acquisition configuration will be created and the data will be sorted.")
+@click.option("--project", type=click.Path(exists=True, path_type=Path),default=None,
+              help="Project directory. If input-dir or output-dir is not provided, it is set to <project>/work/all for input and <project>/work/by_acquisition for output.")
+@click.option("--config-file", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Optional CSV file defining expected acquisition configurations and their folder_name. "
+                   "If not provided and --project is set, the command looks for <project>/config/acquisition_configs.csv. "
+                   "If no config file is found, configurations are detected automatically and saved there when --project is set.",)
+@click.pass_context
+def acquisition_split_cmd(ctx, project, input_dir, output_dir, config_file):
+    """Split UVP acquisitions folders into one folder per acquisition configuration."""
+    from uvptoolbox.commands import acquisition_split
+    if project is None and (input_dir is None or output_dir is None):
+        raise click.UsageError( "You must provide either --project, or both --input-dir and --output-dir.")
+    acquisition_split.run(ctx, project_folder=project, input_dir=input_dir, output_dir=output_dir, config_file=config_file)
+
+
 def main(argv=None):
     cli(prog_name="uvptoolbox", args=argv)
 

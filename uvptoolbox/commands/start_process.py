@@ -92,7 +92,8 @@ def run(ctx, project_folder: Path,
     counters = {"copied": 0, "skipped": 0, "replaced": 0}
 
     for folder in acquisition_folders:
-        result = copy_acquisition_folder(folder, work_all_dir, logger=logger, overwrite=overwrite)
+        dest = work_all_dir / folder.name
+        result = copy_acquisition_folder(folder, dest, logger=logger, overwrite=overwrite)
         counters[result] += 1
 
     logger.info(
