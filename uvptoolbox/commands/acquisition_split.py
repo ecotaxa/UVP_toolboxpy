@@ -78,6 +78,13 @@ def get_provided_acquisition_configs_folders(acq_df, config_file, logger):
     if "folder_name" not in provided_configs.columns:
         raise ValueError("Config file must contain a 'folder_name' column")
 
+    unique_configs = detect_unique_acquisition_configs(acq_df, logger)
+    unsplit_param = unique_configs.columns.difference(provided_configs.columns)
+    if len(unsplit_param) > 0:
+        logger.warning("Different acquisition will be merged together: %s",
+                       "\n".join([f"{param} with values: " + ", ".join(unique_configs[param].dropna().astype(str).unique()) for param in unsplit_param]))
+
+
 
     match_columns = [col for col in provided_configs.columns if col != "folder_name"]
     merged = acq_df.merge(provided_configs, on=match_columns, how="left")
