@@ -3,6 +3,8 @@ from pathlib import Path
 import re
 import shutil
 
+ACQUISITION_FOLDER_PATTERN = re.compile(r"^\d{8}-\d{6}$")
+
 
 def setup_logger(logger_name: str, debug: bool = False) -> logging.Logger:
     """Create a simple console logger for the command."""
@@ -25,8 +27,6 @@ def setup_logger(logger_name: str, debug: bool = False) -> logging.Logger:
 #    return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
 
 
-ACQUISITION_FOLDER_PATTERN = re.compile(r"^\d{8}-\d{6}$")
-
 def find_acquisition_folders(source_root: Path) -> list[Path]:
     """Find all acquisition folders recursively in the source directory."""
     acquisition_folders =  [path for path in source_root.rglob("*") if (path.is_dir() and ACQUISITION_FOLDER_PATTERN.match(path.name))]
@@ -41,7 +41,7 @@ def copy_acquisition_folder(src: Path, dest: Path, logger: logging.Logger, overw
         if overwrite :
             shutil.rmtree(dest)
             shutil.copytree(src, dest)
-            logger.info("Replaced acquisition: %s", dest.name)
+            logger.debug("Replaced acquisition: %s", dest.name)
             return "replaced"
 
         else:
@@ -49,7 +49,7 @@ def copy_acquisition_folder(src: Path, dest: Path, logger: logging.Logger, overw
             return "skipped"
 
     shutil.copytree(src, dest)
-    logger.info("Copied acquisition: %s", dest.name)
+    logger.debug("Copied acquisition: %s", dest.name)
     return "copied"
 
 

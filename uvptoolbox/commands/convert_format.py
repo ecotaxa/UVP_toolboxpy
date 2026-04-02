@@ -8,14 +8,15 @@
 #
 # uvp6 version = 2024.00
 #
-# Work for all data.txt in the provided foalder
+# Work for all data.txt in the provided folder
 #
 # WARNING : does not work with taxo
 
 
 from pathlib import Path
-import shutil #Move and rename files
+import shutil 
 import re
+import click
 from uvptoolbox.utils import setup_logger
 
 
@@ -28,7 +29,7 @@ def convert_hw_line(hw_line: str, logger) -> str:
     """
     parts = hw_line.split(",")
     if len(parts) != 43:
-        logger.warning("Unexpected number of elements in HW line, skipping line convertion: %s", hw_line)
+        logger.warning("Unexpected number of elements in HW line, skipping line conversion: %s", hw_line)
         return None
     parts = parts[:7] + ["0"] + parts[7:13] + ["193.49.112.100"] + parts[13:]
     return ",".join(parts)
@@ -42,7 +43,7 @@ def convert_acq_line(acq_line: str, logger) -> str:
     """
     parts = acq_line.split(",")
     if len(parts) != 23:
-        logger.warning("Unexpected number of elements in ACQ line, skipping line convertion: %s", acq_line)
+        logger.warning("Unexpected number of elements in ACQ line, skipping line conversion: %s", acq_line)
         return None
     parts = parts[:5] + ["1"] + parts[5:9] + ["10"] + parts[9:16] + ["0"] + parts[16:-5] + parts[-2:]
     return ",".join(parts)
@@ -86,39 +87,46 @@ def standardize_uvp_data_format(file_path: Path, logger):
             f.write("\n")
             f.write("\n".join(data_lines) + "\n")
 
-        logger.info("Converted: %s", file_path.name)
+        logger.debug("Converted: %s", file_path.name)
     except Exception as e:
         logger.error("Error processing %s: %s", file_path, e)
 
 
-def run(ctx, project_folder: Path, data_dir: Path = None):
+def run(ctx, data_dir: Path):
+    """Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. Conversion is done in place."""
     logger = setup_logger("uvptoolbox.convert_format", debug=ctx.obj.get("debug", False))
 
     # Check that we have access to the data
-    if data_dir is None:
-        data_dir = project_folder / "work" / "all"
     if not data_dir.exists():
-        logger.error("Provided directory does not exist: %s", data_dir)
-        raise FileNotFoundError(f"Working directory does not exist: {data_dir}")
+        raise click.ClickException(f"Provided directory does not exist: {data_dir}")
     
     overwrite = ctx.obj.get("overwrite", False)
 
     logger.info("Starting convert-format")
     logger.info("Working on files in: %s", data_dir)
-    logger.info("Overwriting already converted data: %s", overwrite)
+    logger.info("Overwriting (re-converting already converted files from archives when possible): %s", overwrite)
 
-    for file_path in data_dir.rglob("*data.txt"):
+    counters = {"converted": 0, "skipped": 0, "reconverted": 0}
+
+    for file_path in data_dir.rglob("*_data.txt"):
         archived_file = file_path.with_name(file_path.stem + "_2023format.txt")
         if not archived_file.exists(): 
             standardize_uvp_data_format(file_path, logger=logger)
+            counters["converted"] += 1
         elif overwrite:
             logger.info("Re-converting from archived original: %s", archived_file.name)
             shutil.copyfile(archived_file, file_path)
             standardize_uvp_data_format(file_path, logger=logger)
+            counters["reconverted"] += 1
         else:
-            logger.info("Skipping already converted file: %s", file_path.name)
+            logger.debug("Skipping already converted file: %s", file_path.name)
+            counters["skipped"] += 1
 
-
-    logger.info("Finished convert-format")
+    logger.info(
+        "Finished convert-format: %d converted, %d skipped, %d re-converted",
+        counters["converted"],
+        counters["skipped"],
+        counters["reconverted"],
+    )
 
 

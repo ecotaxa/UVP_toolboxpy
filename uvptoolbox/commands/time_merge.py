@@ -1,16 +1,15 @@
 from collections import defaultdict
 from pathlib import Path
 from datetime import datetime, timedelta
-import re
 import shutil
 import logging
-from uvptoolbox.utils import setup_logger
+from uvptoolbox.utils import setup_logger, ACQUISITION_FOLDER_PATTERN
 
 
-def rename_folder_and_files_UsedForMerge(acq_dir: Path, logger: logging.Logger, overwrite: bool) -> Path:
+def rename_folder_and_files_UsedForMerge(acq_dir: Path, logger: logging.Logger, overwrite: bool) :
     """Rename acquisition folders and data files with _UsedForMerge suffix if needed."""
 
-    if re.match(r"^\d{8}-\d{6}$", acq_dir.name):
+    if ACQUISITION_FOLDER_PATTERN.match(acq_dir.name):
         new_dir = acq_dir.with_name(acq_dir.name + "_UsedForMerge")
 
         if new_dir.exists() :
@@ -28,7 +27,7 @@ def rename_folder_and_files_UsedForMerge(acq_dir: Path, logger: logging.Logger, 
             acq_dir = new_dir
 
     for file in acq_dir.rglob("*_data.txt"):
-        if re.match(r"^\d{8}-\d{6}_data\.txt$", file.name):  # make sure we don't rename a file already named _UsedForMerge_data.txt
+        if ACQUISITION_FOLDER_PATTERN.match(file.stem.removesuffix("_data")):  # make sure we don't rename a file already named _UsedForMerge_data.txt
             new_file = file.with_name(file.stem.replace("_data", "_UsedForMerge_data") + file.suffix)
             if overwrite or not new_file.exists() :
                 file.rename(new_file)
@@ -81,7 +80,10 @@ def get_min_datetime_from_data_lines(data_lines: list[str]):
         try:
             dt = datetime.strptime(date_time_str, "%Y%m%d-%H%M%S")
         except ValueError:
-            dt = datetime.strptime(date_time_str, "%Y%m%d-%H%M%S-%f")
+            try:
+                dt = datetime.strptime(date_time_str, "%Y%m%d-%H%M%S-%f")
+            except ValueError as e:
+                raise ValueError(f"Unsupported datetime format: {date_time_str}") from e
         datetimes.append(dt)
 
     if not datetimes:
@@ -106,8 +108,11 @@ def split_data(header_lines: list[str], data_lines: list[str], time_step: float,
         date_time_str = line.split(',', 1)[0]
         try:
             date_time = datetime.strptime(date_time_str, '%Y%m%d-%H%M%S')
-        except:
-            date_time = datetime.strptime(date_time_str, '%Y%m%d-%H%M%S-%f')
+        except ValueError:
+            try:
+                date_time = datetime.strptime(date_time_str, "%Y%m%d-%H%M%S-%f")
+            except ValueError as e:
+                raise ValueError(f"Unsupported datetime format: {date_time_str}") from e
 
         # Check if aquisition is after start_datetime
         if date_time < start_datetime:
@@ -165,7 +170,7 @@ def split_data_by_day(data_lines : list[str], header_lines : list[str], start_da
         date_time_str = line.split(',', 1)[0]
         try:
             date_time = datetime.strptime(date_time_str, '%Y%m%d-%H%M%S')
-        except:
+        except ValueError:
             date_time = datetime.strptime(date_time_str, '%Y%m%d-%H%M%S-%f')
 
         # Check if aquisition is after start_datetime
@@ -263,38 +268,23 @@ def copy_vignettes_for_merged_file(merged_data_file: Path, vig_index: dict, logg
 
 
 def run(ctx,
-        project_folder: Path = None,
-        data_dir: Path = None,
+        data_dirs: list[Path],
+        by_day: bool = True,
         start_datetime: str = None,
-        time_step: float = None,
-        by_day: bool = False):
-    logger = setup_logger("uvptoolbox.time_merge", debug=ctx.obj.get("debug", False))
-    
-    # resolve input directories
-    if data_dir is not None:
-        if not data_dir.exists():
-            raise FileNotFoundError(f"Working directory does not exist: {data_dir}")
-        data_dirs = [data_dir]
-    elif project_folder is not None:
-        base_dir = project_folder / "work" / "by_acquisition"
-        if not base_dir.exists():
-            raise FileNotFoundError(f"Directory does not exist: {base_dir}")
-        data_dirs = [p for p in base_dir.iterdir() if p.is_dir()]
-        if not data_dirs:
-            raise FileNotFoundError(f"No data split by acquisition found in project: {project_folder}")
-    else:
-        raise ValueError("Provide either project_folder or data_dir")
+        time_step: float = None):
+    """Merge acquisitions by time step or by day, and copy corresponding vignettes."""
 
+    logger = setup_logger("uvptoolbox.time_merge", debug=ctx.obj.get("debug", False))
 
     overwrite = ctx.obj.get("overwrite", False)
 
     logger.info("Starting time-merge")
     logger.info("Processing %d acquisition setup folder(s)", len(data_dirs))
     logger.info("Overwrite existing outputs: %s", overwrite)
-    if by_day:
-        logger.info("Merging acquisitions by day")
-    elif time_step:
+    if time_step :
         logger.info("Merging acquisitions by time step: %s hours", time_step)
+    else:
+        logger.info("Merging acquisitions by day.")
     if start_datetime:
         logger.info("Acquisitions before %s will not be considered.", start_datetime)
     
@@ -304,12 +294,12 @@ def run(ctx,
             rename_folder_and_files_UsedForMerge(acq_dir,logger=logger,overwrite=overwrite)
         data_files = sorted(data_dir.rglob("*_UsedForMerge_data.txt"))
         if not data_files:
-            logger.warning("No data files found in %s, skipping", data_dir)
-            return
+            logger.warning("No data files found in %s, skipping.", data_dir)
+            continue
         
         header_lines, data_lines = concatenate_data_files(data_files, logger=logger)
         if not header_lines or not data_lines:
-            logger.warning("No mergeable data found in %s, skipping", data_dir)
+            logger.warning("No mergeable data found in %s, skipping.", data_dir)
             continue
 
         current_start_datetime = start_datetime # don't modify start_datetime of other directories to be treated
@@ -332,3 +322,4 @@ def run(ctx,
             copy_vignettes_for_merged_file(merged_file,vig_index,logger=logger,overwrite=overwrite)
 
     logger.info("Finished time-merge")
+
