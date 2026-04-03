@@ -1,115 +1,267 @@
-# UVP_toolboxpy
+# UVPtoolbox
+
+Python package and command-line tool to process UVP6 mooring data.
 
 Following a long acquisition with the UVP6, you may need to create samples grouping data by time or acquisition parameters. 
-The UVP_toolbox allows you to simplify these operations by running three scripts:
--UVP6_start_process/start_processing_new_data.py copy the folders to be processed into the raw folder for the next steps
--UVP6_convert_format/convert_uvp6_format2023.py to convert txt files to the appropriate 2021 format. 
--UVP6_time_merge/time_merge/format_time_series_project.py to group the acquisitions.
--UVP6_create_meta/create_meta.py to create the metadata dataframe associated with the grouped data.
+`UVPtoolbox` helps simplify these operations and prepare UVP6 acquisitions for downstream workflows by:
+- loading new acquisition folders from a source into a project,
+- preparing a working directory and copy the folders to be processed into it,
+- converting `data.txt` files from the 2023 format to the 2021 format expected by downstream tools,
+- splitting acquisitions by acquisition configuration,
+- merging acquisitions by time step or by day, with associated vignette copying,
 
-## How to use it
+The following steps are planned but not fully implemented yet:
+- creating the metadata dataframe associated with the processed data,
+- exporting results to other UVP projects.
 
-Download this repo with git clone.
+## Installation
+
+`UVPtoolbox` should preferably be installed in a virtual environment (venv/cnoda). 
+
+For development or local use:
 ```
-git clone git@github.com:ecotaxa/UVP_toolboxpy.git
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
 ```
-Launch the different scripts like time_merge/format_time_series_project.py
+
+Once installed, the command-line interface should be available. To try it and output the help message:
 ```
-/usr/bin/python UVP6_time_merge/time_merge/format_time_series_project.py
+uvptoolbox 
 ```
-Look at your terminal to give the input needed (input folder, start date time, time step, output folder)
 
-# UVP6_start_process
-## What does it do ?
-Allow you to copy the downloaded data folder into the raw folder in the prokect where the new data can be processed.
+We planed to make a stable version available via pip once a stable version is operational:
+```
+pip install uvptoolbox
+```
+Not implemented yet. 
 
-### User has to specify the path to the dowloaded file and the raw file
-Indicate where both files are located
+# Usage
+The package is designed around the concept of a **project**, but most commands can also be used in **standalone mode** by explicitly providing input and output directories.
+In project mode, arguments are automatically derived from the standard project structure, but they can still be overridden explicitly.
 
-### Choose to erase the raw folder content
+## Naming conventions
 
-If you want to work on new data to be processed you should erase the content of the raw folder that have already been archived
-However, if want to process multiple downloaded data at the same time, you have to do muiltiple copy without erasing the raw folder$
+Raw acquisition folders are expected to follow the naming convention `YYYYMMDD-HHMMSS` (ex: `20250709-090000`).
 
-### Unconcatenate folders by day. 
-The data downloaded from the UVP6 are presented as "2025.05" which means "the fifth download of 2025",
-inside which you can find sub-folders name "09-11, 09-12, 09-13, 09-14, 09-15, 09-16, 09-17...", each corresponding to an acquisition day.
-In order to process the downloaded data are copied in the raw folder of the project without the grouping by day.
+## Command-line interface
 
-Note that the same folder (with a format "20250907-090000") , won't be copy twice to avoid duplicates. 
+A UVPtoolbox command line looks like :
+```
+uvptoolbox [GLOBAL_OPTIONS] command [COMMAND_OPTIONS]
+```
 
-# UVP6_convert_format
-## What does it do ?
-Change the metaline format of some data.txt from 2023 to fit the 2021 format.
+Global options currently include:
+```
+  --debug      Show debugging messages.
+  --overwrite  Overwrite existing outputs.
+```
 
-### Invite the user to specify the data to be formatted
+To see the list of available commands:
+```
+uvptoolbox --help
+```
 
-When you will execute convert_uvp6_fromat 2023 a message will prompt you to provide the path of the the raw folder with the old formated files to be converted.
-
-### Conversion of all original datatxt in the folders inside the raw folder provided.
-
-There is a saving and an archiving of the original data.txt to [...]_2023format.txt
-Then, the script read the data text file from uvp6 and cchange the hwconf line and the acq line and add parameters to fit the old format.
-
-### Each new file is copied in the same folder of the original file.
-
-In each folder you will find the original file in the 2023 format as well as the new file in the old 2021 format saved as *data.txt.
-
-
-# UVP6_time_merge
-Merge different acquisition sequences on a constant time step.
-
-## What does it do ?
-
-While the time_merge/functions.py can help you formatting your project "by hand" the time_merge/format_time_series_project.py is a workflow easy to use that will do it for you. Here is the few step it goes through.
-
-### Invite the user to specify the project, date range and time step of the split/merge to execute
-
-When you will execute format_time_series_project.py a message will prompt you to provide the path of a UVP project with a time series acquisition. The project should be organised as a standard UVP6 project, with a "raw" folder that includes different data.txt and associated vignettes. 
-The user will then chose when he wants to start the split/merge operation.
-
-### Split your raw folder into different raw folders depending on acquisition configuration
-
-One important prerequisite of merging and splitting acquisition is to make sure that we merge data that have been acquired with the same method. The package is thus designed to split your original raw folder in as much raw folders as there is unique acquisition configuration. Each new folder will be name "raw_a", "raw_b" etc... 
-The original datatxt will be copied in the new project. 
-
-### Merge and/or split the data
-
-Once we are sure that our raw folders have the same acquisition parameters we can proceed to data manipulation. The user will input a time step on which he want to reshape the new raw folders (one per acq conf). The new datatxt will be name like "'%Y%m%d-%H%M%S_Merged_data.txt". 
-
-### Moving vignette to new raw folder
-
-Finally, the vig will be copied from the old raw folder, based on the different dates of the merged_data.txt dates.
+To see the options of a specific command:
+```
+uvptoolbox command --help
+```
 
 
+## Usage in project mode
 
-# UVP6_copy_to_good_project
-## What does it do ?
-Allow you move the merged_folders into the appropriate project folder if they aren't already in the good one. 
+### Project Structure
+A project corresponds conceptually to a cruise, a time series, etc. In practice, it is a directory containing all files related to this dataset, organized with the standard structure expected by the processing commands.
 
-### Invite the user to specify the folder where the *_Merged folders are stored and the folder where they are supposed to be moved to
-When you will execute UVP6_copy_to_good_project.py a message will prompt you to provide the path of the source folders with the files to copy. It should be a raw or raw_a,b... where the merged folders are stored. If you want to copy them in the appropriate Project folder give the path to the 
-associated "raw" folder.
+Typical structure:
+```
+my_project/
+    raw/                                folders storring all raw acquisition 
+    work/                               data created by the various processing steps
+        all/                            acquisitions selected for processing
+        by_acquisition/                 acquisitions split by acquisition configuration
+    config/                             configuration files
+        by_acquisition_configs.csv      optional acquisition split configuration file
+    logs/                               optional log and bookkeeping files
+    meta/                               metadata outputs (planned / in progress)
+```
+### Minimal workflow in project mode
 
-### Copy of the *_Merged folder 
-The folders will be copy entirely in the right folder if they aren't already present. 
+To run the current processing pipeline step by step in a project:
+```
+# Copy acquisition folders from a source input directory to the raw directoy of a project (<project>/raw`).
+uvptoolbox load-new-data -i /path/to/source -p /path/to/project
+
+# Prepare a work directory and copy acquisitions not already processed from `<project>/raw` to `<project>/work/all.
+uvptoolbox start-process -p /path/to/project
+
+# Convert UVP6 data.txt files in `<project>/work/all` from the 2023 format to the 2021 format expected downstream.
+uvptoolbox convert-format -p /path/to/project
+
+# Split acquisitions into one folder per acquisition configuration.
+uvptoolbox acquisition-split -p /path/to/project
+
+# Merge acquisitions by day or by fixed time step, and copy corresponding vignettes.
+uvptoolbox time-merge -p /path/to/project --by-day 
+```
+
+## Detail commands usage
+
+All commands can also be used in a **standalone mode**  without a project architecture or in a **project mode** where arguments are automatically set based on project standard structure but can be overwritten if explicitly provided.  
+
+#### load-new-data
+Copy acquisition folders named YYYYMMDD-HHMMSS from an input source directory to an output directory. 
+
+Only acquisitions not already present in the output folder are copied unless --overwrite is specified.
+
+Standalone mode:
+```
+uvptoolbox load-new-data -i /path/to/source -o /path/to/output
+```
+
+Project mode:
+```
+uvptoolbox load-new-data -i /path/to/source -p /path/to/project
+```
+Default output directory in project mode: `<project>/raw`.
+
+Notes : 
+The source directory containing UVP6 downloads can be organized in an arborescence such as:
+```
+2025.05/                        meaning "the fifth download of 2025"
+    09-11/                      an acquisition day
+        20250911-000000/
+        20250911-010000/
+        ...
+    09-12/                      an other acquisition day
+        20250912-000000/
+        20250912-010000/
+        ...
+```
+The command searches recursively through all directories and subdirectories to find acquisition folders named YYYYMMDD-HHMMSS, 
+and copies them into the output directory without preserving the original grouping.
+
+#### start-process
+Prepare a work directory and copy unprocessed raw data into work/all.
+
+Standalone mode:
+```
+uvptoolbox start-process -i /path/to/input -o /path/to/output_root
+```
+This creates `<output_root>/work/all` and copy acquisition folder into it. 
+
+Options:
+- `--reset-work-dir` Empty the work directory before copying acquisitions.
+- `--skip-processed / --do-not-skip-processed` Skip acquisitions listed in the <acquisitions-to-skip-file> file if provided. Default :--skip-processed.
+- `--acquisitions-to-skip-file` Path to a text file listing acquisition folder names to skip (ex : already processed acquisitions).
+
+If you want to work on new data to be processed you should reset the work folder who's output have already been archived.
+However, if you want to process multiple downloaded data at the same time, you have to do multiple copy without erasing the work folder.
+
+Project mode:
+```
+uvptoolbox start-process -p /path/to/project
+```
+In project mode, the command creates `<project>/work/all` and copy acquisition folder from `<project>/raw` into it. 
+By default, acquisitions-to-skip-file is search in `<project>/logs/processed_acquisitions.txt and acquisition folders listed in this file are not copied to <project>/work/all to avoid possessing already processed data. 
+
+#### convert-format
+Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. This command changes the HW and ACQ lines by inserting the fields required by the older format. 
+
+Conversion is done in place:
+- the original file is archived as *_2023format.txt,
+- the converted content is written back under the original *_data.txt name,
+- existing archived originals (*_2023format.txt) are used to regenerate 2021 formated files when --overwrite is enabled.
+
+Standalone mode:
+```
+uvptoolbox convert-format -d /path/to/data_dir
+```
+
+Project mode:
+```
+uvptoolbox convert-format -p /path/to/project
+```
+Default working directory in project mode: `<project>/work/all`
 
 
+#### acquisition-split
+Split UVP acquisitions folders into one folder per acquisition configuration.
 
-# UVP6_create_meta
-## What does it do ?
-create metadata for a UVP MOORING project by processing data files stored in a specified folder. Here's a breakdown of what the script does:
+The user can optionally provide the path to a CSV 'config' file to defines expected acquisition configurations and the corresponding `folder_name`.
+If the file:
+- exists: it is used,
+- does not exist but the path is provided: configurations are detected automatically and the file is created.
 
-### Invite the user to specify the project, the latitude, longitude to execute
+This makes it possible to reuse the same grouping logic for later incoming data.
 
-When you will execute UVP6_create_meta.py a message will prompt you to provide the path of a UVP project with the longitude and latitude acquisition. The project should be organised as a standard UVP6 project, with a "raw" folder that includes different Merged.txt created from the script above UVP6_time_merge. The project metadata and the UVP6 HW_conf must be present in the config folder of the project.
+If some varying acquisition parameters are not listed in the config file, the command will warn that different acquisitions may be merged together.
 
-### Extracting Depth and Station ID
-we will extract depth and station ID from the folder path, or with user input. The user should make sure that all the information needed are in the path or in the *.txt of folder config of the UVP. Depth and Station ID can be manually provided.
+Example of config file:
+```
+configuration_name,acquisition_frequency,folder_name
+ACQ_obsea_off,0.100,OBSEA_Off
+ACQ_obsea_on,0.100,OBSEA_On
+ACQ_obsea_off,2.000,OBSEA_Off
+ACQ_obsea_on,2.000,OBSEA_On
+```
+IIn this example, acquisitions with both 0.100 and 2.000 acquisition frequencies are grouped into OBSEA_Off and OBSEA_On folders according to their configuration names.
 
-### Processing Data Files
-The script searches for data files (*Merged_data.txt) in the specified folder, parses these files to extract relevant information like the filename, profile ID, and sample datetime. It also calculates the number of images in each .txt (end image number). In the end, it will create a DataFrame with this information, and classify it based on the datetime. 
+Standalone mode:
+```
+# without config file
+uvptoolbox acquisition-split -i /path/to/input -o /path/to/output
 
-### Storing the meta file 
-The new datatxt will be named like "'uvp6_header_NAMEOFTHEPROJECT.txt". For now it is stored in your home repository and should be then moved manually to your project, in the meta file. However, if you use the create_meta-Copy.py script the datatxt will be stored directly in the meta file.
+# with config file
+uvptoolbox acquisition-split -i /path/to/input -o /path/to/output -c /path/to/config.csv
+```
+
+Project mode:
+```
+uvptoolbox acquisition-split -p /path/to/project
+```
+Default arguments in project mode:
+- input : `<project>/work/all`
+- output : `<project>/work/by_acquisition`
+- config file : `<project>/config/by_acquisition_configs.csv`
+
+
+#### time-merge
+Merge acquisitions by time step or by day, and copy corresponding vignettes.
+This step creates in the provided data folder merged folders such as `YYYYMMDD-HHMMSS_Merged/` containing:
+- a `merged *_Merged_data.txt` file,
+- a `1/` directory with copied vignettes.
+
+Standalone mode:
+```
+# to merge by day
+uvptoolbox time-merge -d /path/to/data_folder --by-day
+
+# to merge by fixed XX-hours time step bins
+uvptoolbox time-merge -d /path/to/data_folder -t XX
+```
+If neither --by-day nor --time-step is explicitly provided, daily merging is used by default.
+
+Optional argument:   
+
+`--start-datetime` Time in format YYYYMMDD- HHMMSS. 
+
+- In --time-step mode, binning starts from this datetime. Default : the earliest datetime found in the data. 
+- In --time-step or --by-day mode, acquisitions before this datetime are ignored. 
+
+
+Project mode:
+```
+# to merge by day
+uvptoolbox time-merge -p /path/to/project --by-day
+
+# to merge by fixed XX-hours time step bins
+uvptoolbox time-merge -p /path/to/project -t XX
+```
+Default input in project mode: All folders inside `<project>/work/by_acquisition` are processed.
+
+### Current limitations
+
+Metadata generation Export/copy commands to external “final” UVP projects are still under development. 
+The package is under active refactoring; command names and options may still evolve.
 
