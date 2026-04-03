@@ -16,7 +16,7 @@ The following steps are planned but not fully implemented yet:
 
 ## Installation
 
-`UVPtoolbox` should preferably be installed in a virtual environment (venv/cnoda). 
+`UVPtoolbox` should preferably be installed in a virtual environment (venv/conda). 
 
 For development or local use:
 ```
@@ -30,7 +30,7 @@ Once installed, the command-line interface should be available. To try it and ou
 uvptoolbox 
 ```
 
-We planed to make a stable version available via pip once a stable version is operational:
+We plan to make a stable version available via pip once a stable version is operational:
 ```
 pip install uvptoolbox
 ```
@@ -76,7 +76,7 @@ A project corresponds conceptually to a cruise, a time series, etc. In practice,
 Typical structure:
 ```
 my_project/
-    raw/                                folders storring all raw acquisition 
+    raw/                                folders storing all raw acquisition 
     work/                               data created by the various processing steps
         all/                            acquisitions selected for processing
         by_acquisition/                 acquisitions split by acquisition configuration
@@ -89,7 +89,7 @@ my_project/
 
 To run the current processing pipeline step by step in a project:
 ```
-# Copy acquisition folders from a source input directory to the raw directoy of a project (<project>/raw`).
+# Copy acquisition folders from a source input directory to the raw directory of a project (<project>/raw`).
 uvptoolbox load-new-data -i /path/to/source -p /path/to/project
 
 # Prepare a work directory and copy acquisitions not already processed from `<project>/raw` to `<project>/work/all.
@@ -131,7 +131,7 @@ The source directory containing UVP6 downloads can be organized in an arborescen
         20250911-000000/
         20250911-010000/
         ...
-    09-12/                      an other acquisition day
+    09-12/                      another acquisition day
         20250912-000000/
         20250912-010000/
         ...
@@ -149,7 +149,7 @@ uvptoolbox start-process -i /path/to/input -o /path/to/output_root
 This creates `<output_root>/work/all` and copy acquisition folders into it. 
 
 Options:
-- `--reset-work-dir` Empty the work directory before copying acquisitions. If you want to work on a new set of data to be processed you should reset the work folder who's output have already been archived. However, if you want to process data loaded in the work directory through multiple runs at the same time, you have to do multiple copy without erasing the work folder. Default: False
+- `--reset-work-dir` Empty the work directory before copying acquisitions. If you want to work on a new set of data to be processed you should reset the work folder whose output have already been archived. However, if you want to process data loaded in the work directory through multiple runs at the same time, you have to do multiple copy without erasing the work folder. Default: False
 - `--skip-processed / --do-not-skip-processed` Skip acquisitions listed in the <acquisitions-to-skip-file> file if provided. Default:--skip-processed.
 - `--acquisitions-to-skip-file` Path to a text file listing acquisition folder names to skip (ex  already processed acquisitions).
 
@@ -158,7 +158,7 @@ Options:
 uvptoolbox start-process -p /path/to/project
 ```
 In project mode, the command creates `<project>/work/all` and copy acquisition folder from `<project>/raw` into it. 
-By default, `acquisitions-to-skip-file` is search in `<project>/logs/processed_acquisitions.txt` and acquisition folders listed in this file are not considered to avoid prossessing already processed data. 
+By default, `acquisitions-to-skip-file` is search in `<project>/logs/processed_acquisitions.txt` and acquisition folders listed in this file are not considered to avoid processing already processed data. 
 
 ### convert-format
 Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. This command changes the HW and ACQ lines by inserting the fields required by the older format. 
@@ -166,7 +166,7 @@ Convert UVP data.txt files from 2023 format to the 2021 format expected downstre
 Conversion is done in place:
 - the original file is archived as *_2023format.txt,
 - the converted content is written back under the original *_data.txt name,
-- existing archived originals (*_2023format.txt) are used to regenerate 2021 formated files when --overwrite is enabled.
+- existing archived originals (*_2023format.txt) are used to regenerate 2021 formatted files when --overwrite is enabled.
 
 #### Standalone mode:
 ```
@@ -183,7 +183,7 @@ Default working directory in project mode is set to `<project>/work/all`.
 ### acquisition-split
 Split UVP acquisitions folders into one folder per acquisition configuration.
 
-The user can optionally provide the path to a CSV "configuration file" to defines expected acquisition configurations and the corresponding `folder_name`.
+The user can optionally provide the path to a CSV "configuration file" to define expected acquisition configurations and the corresponding `folder_name`.
 If the file:
 - exists: it is used,
 - does not exist but the path is provided: configurations are detected automatically and the file is created.
