@@ -109,23 +109,21 @@ uvptoolbox time-merge -p /path/to/project --by-day
 
 All commands can also be used in a **standalone mode**  without a project architecture or in a **project mode** where arguments are automatically set based on project standard structure but can be overwritten if explicitly provided.  
 
-#### load-new-data
-Copy acquisition folders named YYYYMMDD-HHMMSS from an input source directory to an output directory. 
+### load-new-data
+Copy acquisition folders named with the convention `YYYYMMDD-HHMMSS` from an input source directory to an output directory. Only acquisitions not already present in the output folder are copied unless --overwrite is specified.
 
-Only acquisitions not already present in the output folder are copied unless --overwrite is specified.
-
-Standalone mode:
+#### Standalone mode:
 ```
 uvptoolbox load-new-data -i /path/to/source -o /path/to/output
 ```
 
-Project mode:
+#### Project mode:
 ```
 uvptoolbox load-new-data -i /path/to/source -p /path/to/project
 ```
-Default output directory in project mode: `<project>/raw`.
+Default output directory in project mode is set to `<project>/raw`.
 
-Notes : 
+#### Notes : 
 The source directory containing UVP6 downloads can be organized in an arborescence such as:
 ```
 2025.05/                        meaning "the fifth download of 2025"
@@ -138,34 +136,31 @@ The source directory containing UVP6 downloads can be organized in an arborescen
         20250912-010000/
         ...
 ```
-The command searches recursively through all directories and subdirectories to find acquisition folders named YYYYMMDD-HHMMSS, 
+The command searches recursively through all directories and subdirectories to find acquisition folders named `YYYYMMDD-HHMMSS`, 
 and copies them into the output directory without preserving the original grouping.
 
-#### start-process
-Prepare a work directory and copy unprocessed raw data into work/all.
+### start-process
+Prepare a working directory named `work` for the upcoming processing steps and copy unprocessed raw data into `work/all`.
 
-Standalone mode:
+#### Standalone mode:
 ```
 uvptoolbox start-process -i /path/to/input -o /path/to/output_root
 ```
-This creates `<output_root>/work/all` and copy acquisition folder into it. 
+This creates `<output_root>/work/all` and copy acquisition folders into it. 
 
 Options:
-- `--reset-work-dir` Empty the work directory before copying acquisitions.
-- `--skip-processed / --do-not-skip-processed` Skip acquisitions listed in the <acquisitions-to-skip-file> file if provided. Default :--skip-processed.
-- `--acquisitions-to-skip-file` Path to a text file listing acquisition folder names to skip (ex : already processed acquisitions).
+- `--reset-work-dir` Empty the work directory before copying acquisitions. If you want to work on a new set of data to be processed you should reset the work folder who's output have already been archived. However, if you want to process data loaded in the work directory through multiple runs at the same time, you have to do multiple copy without erasing the work folder. Default: False
+- `--skip-processed / --do-not-skip-processed` Skip acquisitions listed in the <acquisitions-to-skip-file> file if provided. Default:--skip-processed.
+- `--acquisitions-to-skip-file` Path to a text file listing acquisition folder names to skip (ex  already processed acquisitions).
 
-If you want to work on new data to be processed you should reset the work folder who's output have already been archived.
-However, if you want to process multiple downloaded data at the same time, you have to do multiple copy without erasing the work folder.
-
-Project mode:
+#### Project mode:
 ```
 uvptoolbox start-process -p /path/to/project
 ```
 In project mode, the command creates `<project>/work/all` and copy acquisition folder from `<project>/raw` into it. 
-By default, acquisitions-to-skip-file is search in `<project>/logs/processed_acquisitions.txt and acquisition folders listed in this file are not copied to <project>/work/all to avoid possessing already processed data. 
+By default, `acquisitions-to-skip-file` is search in `<project>/logs/processed_acquisitions.txt` and acquisition folders listed in this file are not considered to avoid prossessing already processed data. 
 
-#### convert-format
+### convert-format
 Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. This command changes the HW and ACQ lines by inserting the fields required by the older format. 
 
 Conversion is done in place:
@@ -173,22 +168,22 @@ Conversion is done in place:
 - the converted content is written back under the original *_data.txt name,
 - existing archived originals (*_2023format.txt) are used to regenerate 2021 formated files when --overwrite is enabled.
 
-Standalone mode:
+#### Standalone mode:
 ```
 uvptoolbox convert-format -d /path/to/data_dir
 ```
 
-Project mode:
+##### Project mode:
 ```
 uvptoolbox convert-format -p /path/to/project
 ```
-Default working directory in project mode: `<project>/work/all`
+Default working directory in project mode is set to `<project>/work/all`.
 
 
-#### acquisition-split
+### acquisition-split
 Split UVP acquisitions folders into one folder per acquisition configuration.
 
-The user can optionally provide the path to a CSV 'config' file to defines expected acquisition configurations and the corresponding `folder_name`.
+The user can optionally provide the path to a CSV "configuration file" to defines expected acquisition configurations and the corresponding `folder_name`.
 If the file:
 - exists: it is used,
 - does not exist but the path is provided: configurations are detected automatically and the file is created.
@@ -197,7 +192,7 @@ This makes it possible to reuse the same grouping logic for later incoming data.
 
 If some varying acquisition parameters are not listed in the config file, the command will warn that different acquisitions may be merged together.
 
-Example of config file:
+Example of configuration file:
 ```
 configuration_name,acquisition_frequency,folder_name
 ACQ_obsea_off,0.100,OBSEA_Off
@@ -205,9 +200,9 @@ ACQ_obsea_on,0.100,OBSEA_On
 ACQ_obsea_off,2.000,OBSEA_Off
 ACQ_obsea_on,2.000,OBSEA_On
 ```
-IIn this example, acquisitions with both 0.100 and 2.000 acquisition frequencies are grouped into OBSEA_Off and OBSEA_On folders according to their configuration names.
+In this example, acquisitions with both 0.100 and 2.000 acquisition frequencies are grouped into OBSEA_Off and OBSEA_On folders according to their configuration names.
 
-Standalone mode:
+#### Standalone mode:
 ```
 # without config file
 uvptoolbox acquisition-split -i /path/to/input -o /path/to/output
@@ -216,7 +211,7 @@ uvptoolbox acquisition-split -i /path/to/input -o /path/to/output
 uvptoolbox acquisition-split -i /path/to/input -o /path/to/output -c /path/to/config.csv
 ```
 
-Project mode:
+#### Project mode:
 ```
 uvptoolbox acquisition-split -p /path/to/project
 ```
@@ -226,13 +221,13 @@ Default arguments in project mode:
 - config file : `<project>/config/by_acquisition_configs.csv`
 
 
-#### time-merge
+### time-merge
 Merge acquisitions by time step or by day, and copy corresponding vignettes.
 This step creates in the provided data folder merged folders such as `YYYYMMDD-HHMMSS_Merged/` containing:
 - a `merged *_Merged_data.txt` file,
 - a `1/` directory with copied vignettes.
 
-Standalone mode:
+#### Standalone mode:
 ```
 # to merge by day
 uvptoolbox time-merge -d /path/to/data_folder --by-day
@@ -244,13 +239,13 @@ If neither --by-day nor --time-step is explicitly provided, daily merging is use
 
 Optional argument:   
 
-`--start-datetime` Time in format YYYYMMDD- HHMMSS. 
+`--start-datetime` Time in format `YYYYMMDD- HHMMSS`. 
 
-- In --time-step mode, binning starts from this datetime. Default : the earliest datetime found in the data. 
-- In --time-step or --by-day mode, acquisitions before this datetime are ignored. 
+- In `--time-step` mode, binning starts from this datetime. Default : the earliest datetime found in the data. 
+- In `--time-step` or `--by-day` mode, acquisitions before this datetime are ignored. 
 
 
-Project mode:
+#### Project mode:
 ```
 # to merge by day
 uvptoolbox time-merge -p /path/to/project --by-day
@@ -258,9 +253,9 @@ uvptoolbox time-merge -p /path/to/project --by-day
 # to merge by fixed XX-hours time step bins
 uvptoolbox time-merge -p /path/to/project -t XX
 ```
-Default input in project mode: All folders inside `<project>/work/by_acquisition` are processed.
+In project mode all folders inside `<project>/work/by_acquisition` are processed.
 
-### Current limitations
+## Current limitations
 
 Metadata generation Export/copy commands to external “final” UVP projects are still under development. 
 The package is under active refactoring; command names and options may still evolve.
