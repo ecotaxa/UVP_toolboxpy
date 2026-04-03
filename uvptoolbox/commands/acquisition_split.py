@@ -130,6 +130,14 @@ def run(ctx,
     """Split UVP acquisitions folders into one folder per acquisition configuration."""
     
     logger = setup_logger("uvptoolbox.acquisition_split", debug=ctx.obj.get("debug", False))
+    
+    
+    overwrite = ctx.obj.get("overwrite", False)
+
+    logger.info("Starting acquisition-split")
+    logger.info("Input data folder: %s", input_dir)
+    logger.info("Output data folder: %s", output_dir)
+    logger.info("Overwriting in output folder: %s", overwrite)
 
 
     # Make sure we have access to input data
@@ -148,14 +156,6 @@ def run(ctx,
         else:
             logger.info("Acquisition config file not found. A new one will be created if more than one configuration is detected: %s",
             config_file)
-
-
-    overwrite = ctx.obj.get("overwrite", False)
-
-    logger.info("Starting acquisition-split")
-    logger.info("Input data folder: %s", input_dir)
-    logger.info("Output data folder: %s", output_dir)
-    logger.info("Overwriting in output folder: %s", overwrite)
     
 
     data_files = list(input_dir.rglob("*_data.txt"))

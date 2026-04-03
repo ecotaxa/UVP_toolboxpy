@@ -9,29 +9,38 @@ from uvptoolbox.utils import setup_logger, ACQUISITION_FOLDER_PATTERN
 def rename_folder_and_files_UsedForMerge(acq_dir: Path, logger: logging.Logger, overwrite: bool) :
     """Rename acquisition folders and data files with _UsedForMerge suffix if needed."""
 
-    if ACQUISITION_FOLDER_PATTERN.match(acq_dir.name):
+    status = None
+    renamed_files = 0
+
+    if ACQUISITION_FOLDER_PATTERN.match(acq_dir.name): # acq_dir raw acquisition directory, not renamed
         new_dir = acq_dir.with_name(acq_dir.name + "_UsedForMerge")
 
-        if new_dir.exists() :
+        if new_dir.exists() : # both acq_dir and acq_dir__UsedForMerge exist
             if overwrite:
                 shutil.rmtree(new_dir)
                 acq_dir.rename(new_dir)
-                logger.info("Reset acquisition directory %s", new_dir.name)
                 acq_dir = new_dir
+                logger.debug("UsedForMerge directory already existed, rested from archive: %s", new_dir.name)
+                status = "reset"
             else :
-                logger.debug("Skipping already renamed folder: %s", new_dir.name)
                 acq_dir = new_dir
+                logger.debug("UsedForMerge directory already exists, keeping it: %s", new_dir.name)
+                status = "skipped"
         else:
             acq_dir.rename(new_dir)
-            logger.info("Renamed acquisition directory %s", new_dir.name)
             acq_dir = new_dir
+            logger.debug("Renamed acquisition directory %s", new_dir.name)
+            status = "renamed"
 
     for file in acq_dir.rglob("*_data.txt"):
         if ACQUISITION_FOLDER_PATTERN.match(file.stem.removesuffix("_data")):  # make sure we don't rename a file already named _UsedForMerge_data.txt
             new_file = file.with_name(file.stem.replace("_data", "_UsedForMerge_data") + file.suffix)
             if overwrite or not new_file.exists() :
                 file.rename(new_file)
-                logger.info("Renamed data file %s", new_file.name)
+                logger.debug("Renamed data file %s", new_file.name)
+                renamed_files += 1
+
+    return status,renamed_files
 
 def concatenate_data_files(data_files: list[Path], logger: logging.Logger):
     """Concatenate multiple UVP data files into header lines and data lines."""
@@ -236,9 +245,10 @@ def copy_vignettes_for_merged_file(merged_data_file: Path, vig_index: dict, logg
             if not line or line.startswith(("HW", "ACQ")):
                 continue
             datetime_list.append(line.split(",")[0][:15])
+    datetime_list = list(set(datetime_list)) # remove duplicate if multiple acquisition at the same timestep
 
     vignettes = []
-    for datetime_key in datetime_list:
+    for datetime_key in datetime_list :
         if datetime_key in vig_index:
             vignettes.extend(vig_index[datetime_key])
 
@@ -290,12 +300,29 @@ def run(ctx,
     
     for data_dir in data_dirs:
         logger.info("Processing folder: %s", data_dir)
+
+        counters = {"reset": 0, "renamed": 0, "skipped": 0, "renamed_files": 0}
         for acq_dir in data_dir.iterdir():
-            rename_folder_and_files_UsedForMerge(acq_dir,logger=logger,overwrite=overwrite)
+            status,renamed_files = rename_folder_and_files_UsedForMerge(acq_dir,logger=logger,overwrite=overwrite)
+            if status is not None:
+                counters[status] += 1
+            counters["renamed_files"] += renamed_files
+
+        logger.info("Renaming before processing : \n "
+                    "- %d directories renamed with _UsedForMerge extension \n "
+                    "- %d directories skipped because already named with _UsedForMerge extension \n "
+                    "- %d directories renamed with _UsedForMerge extension overwriting an already present directory \n "
+                    "- %d data files renamed with _UsedForMerge_data.txt extension",
+                    counters["renamed"],
+                    counters["skipped"],
+                    counters["reset"],
+                    counters["renamed_files"],)
+
         data_files = sorted(data_dir.rglob("*_UsedForMerge_data.txt"))
         if not data_files:
             logger.warning("No data files found in %s, skipping.", data_dir)
             continue
+        logger.info("Number of acquisition data files named *_UsedForMerge_data.txt found: %s", len(data_files))
         
         header_lines, data_lines = concatenate_data_files(data_files, logger=logger)
         if not header_lines or not data_lines:
@@ -305,6 +332,7 @@ def run(ctx,
         current_start_datetime = start_datetime # don't modify start_datetime of other directories to be treated
         if current_start_datetime is None:
             current_start_datetime = get_min_datetime_from_data_lines(data_lines)
+        logger.info("Stating at date : %s", current_start_datetime)
 
 
         if by_day:
@@ -315,7 +343,7 @@ def run(ctx,
             split_dict = split_data(header_lines, data_lines, time_step, current_start_datetime)
             merged_files = write_splitted_data(split_dict, data_dir, time_step, current_start_datetime, logger=logger,overwrite=overwrite)
         
-        vig_list = list(data_dir.rglob("*.vig"))
+        vig_list = [vig for vig in data_dir.rglob("*.vig") if "_Merged" not in str(vig)]
         vig_index = build_vig_index(vig_list)
 
         for merged_file in merged_files:

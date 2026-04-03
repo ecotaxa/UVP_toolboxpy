@@ -107,7 +107,7 @@ def convert_format_cmd(ctx, data_dir, project):
               help="Input directory containing acquisition folders to split.")
 @click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=None,
               help="Output directory where one folder per acquisition configuration will be created.")
-@click.option("--config-file", type=click.Path( path_type=Path), default=None,
+@click.option("--config-file", "-c", type=click.Path( path_type=Path), default=None,
               help="Optional CSV file defining acquisition configurations and their folder_name."
                    "If the file exists, it is used. If it does not exist, configurations are detected automatically and the file is created.\n"
                    "ex : "

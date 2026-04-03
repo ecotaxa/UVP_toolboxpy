@@ -95,10 +95,6 @@ def standardize_uvp_data_format(file_path: Path, logger):
 def run(ctx, data_dir: Path):
     """Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. Conversion is done in place."""
     logger = setup_logger("uvptoolbox.convert_format", debug=ctx.obj.get("debug", False))
-
-    # Check that we have access to the data
-    if not data_dir.exists():
-        raise click.ClickException(f"Provided directory does not exist: {data_dir}")
     
     overwrite = ctx.obj.get("overwrite", False)
 
@@ -106,9 +102,19 @@ def run(ctx, data_dir: Path):
     logger.info("Working on files in: %s", data_dir)
     logger.info("Overwriting (re-converting already converted files from archives when possible): %s", overwrite)
 
+    # Check that we have access to the data
+    if not data_dir.exists():
+        raise click.ClickException(f"Provided directory does not exist: {data_dir}")
+
     counters = {"converted": 0, "skipped": 0, "reconverted": 0}
 
-    for file_path in data_dir.rglob("*_data.txt"):
+    data_files = list(data_dir.rglob("*_data.txt"))
+
+    if not data_files:
+        logger.warning("No acquisition data files found in %s", data_dir)
+        return
+
+    for file_path in data_files:
         archived_file = file_path.with_name(file_path.stem + "_2023format.txt")
         if not archived_file.exists(): 
             standardize_uvp_data_format(file_path, logger=logger)
