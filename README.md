@@ -173,7 +173,8 @@ Conversion is done in place:
 uvptoolbox convert-format -d /path/to/data_dir
 ```
 
-##### Project mode:
+#### Project mode:
+#### Project mode:
 ```
 uvptoolbox convert-format -p /path/to/project
 ```
