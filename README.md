@@ -9,9 +9,10 @@ Following a long acquisition with the UVP6, you may need to create samples group
 - converting `data.txt` files from the 2023 format to the 2021 format expected by downstream tools,
 - splitting acquisitions by acquisition configuration,
 - merging acquisitions by time step or by day, with associated vignette copying,
+- creating the metadata dataframe associated with the processed data,
 
 The following steps are planned but not fully implemented yet:
-- creating the metadata dataframe associated with the processed data,
+
 - exporting results to other UVP projects.
 
 ## Installation
@@ -83,7 +84,7 @@ my_project/
     config/                             configuration files
         by_acquisition_configs.csv      optional acquisition split configuration file
     logs/                               optional log and bookkeeping files
-    meta/                               metadata outputs (planned / in progress)
+    meta/                               metadata outputs 
 ```
 ### Minimal workflow in project mode
 
@@ -103,6 +104,9 @@ uvptoolbox acquisition-split -p /path/to/project
 
 # Merge acquisitions by day or by fixed time step, and copy corresponding vignettes.
 uvptoolbox time-merge -p /path/to/project --by-day 
+
+# Create metadata file(s) from merged UVP data files and project configuration files.
+uvptoolbox create-meta -p /path/to/project --latitude XX.XXXX --longitude XX.XXXX --constant-depth XX.X 
 ```
 
 ## Detail commands usage
@@ -255,8 +259,53 @@ uvptoolbox time-merge -p /path/to/project -t XX
 ```
 In project mode all folders inside `<project>/work/by_acquisition` are processed.
 
+
+### create-meta
+Create metadata file(s) from merged UVP data files and project configuration files.
+
+This step searches for information in :
+- configuration files (`cruise_info.txt` and `HW_*.txt`) 
+- merged acquisition files (`*Merged*_data.txt`) 
+- command-line arguments such as `--latitude`, `--longitude`, `--constant-depth`, and `--station-id`
+
+and creates metadata tables in the historical UVP header format.  
+
+Each row correspond to one merged acquisition, and include fields as :
+- `filename`
+- `profileid`
+- `endimg`
+- `sampledatetime`
+- `pixelsize`
+- `latitude`
+- `longitude`
+- `constantdepth`
+- ...
+
+#### Standalone mode:
+
+```
+uvptoolbox create-meta -d /path/to/data_folder  -c /path/to/config_folder  -o /path/to/output_folder 
+```
+
+Optional argument:   
+- `--latitude` latitude of the mooring in decimal degrees,
+- `--longitude` longitude of the mooring in decimal degrees,
+- `--constant-depth` constant depth of the mooring in meters,
+- `--station-id` station identifier. If not provided, the cruise acronym is used as a fallback.
+
+
+#### Project mode:
+```
+uvptoolbox create-meta -p /path/to/project
+```
+In project mode:
+- all folders inside `<project>/work/by_acquisition` are processed,
+- the configuration directory defaults to `<project>/config`,
+- the output directory defaults to `<project>/meta`,
+- one metadata file is created for each acquisition-configuration subdirectory.
+
 ## Current limitations
 
-Metadata generation Export/copy commands to external “final” UVP projects are still under development. 
+Export/copy commands to external “final” UVP projects is still under development. 
 The package is under active refactoring; command names and options may still evolve.
 

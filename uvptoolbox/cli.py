@@ -178,6 +178,58 @@ def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project):
     time_merge.run(ctx, data_dirs=data_dirs, by_day=by_day, time_step=time_step, start_datetime=start_datetime)
 
 
+
+@cli.command(name="create-meta")
+@click.option("--data-dir", "-d",type=click.Path(exists=True, path_type=Path), default=None,
+              help="Directory containing merged UVP data files for one acquisition configuration.")
+@click.option("--config-dir", "-c",type=click.Path(exists=True, path_type=Path),default=None,
+              help="Directory containing project configuration files such as cruise_info.txt and HW_*.txt.")
+@click.option("--output-dir", "-o",type=click.Path(path_type=Path),default=None,
+              help="Output directory where metadata file(s) will be writen.")
+@click.option("--latitude",type=str,default=None,help="Latitude of the mooring in decimal degrees.")
+@click.option("--longitude",type=str,default=None,help="Longitude of the mooring in decimal degrees.")
+@click.option("--constant-depth",type=str,default=None,help="Constant depth of the mooring in m.")
+@click.option("--station-id",type=str,default=None, help="Station identifier. If not provided, the cruise acronym is used as fallback.")
+@click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Project directory for project mode. If data-dir is not provided explicitly, one metadata file is created "
+                   "for each acquisition-configuration subdirectory in <project>/work/by_acquisition."
+              "If not provided explicitly: "
+                   "--config-dir is set to <project>/config, --output-dir is set to <project>/meta")
+@click.pass_context
+def create_meta_cmd(ctx,data_dir,config_dir,output_dir,latitude,longitude,constant_depth,station_id,project):
+    """Create metadata file(s) from merged UVP data files and project configuration files."""
+    from uvptoolbox.commands import create_meta
+
+
+    data_dirs = []
+    if data_dir is not None:
+        data_dirs = [data_dir]
+    else:
+        if project is not None:
+            base_dir = project / "work" / "by_acquisition"
+            if base_dir.exists():
+                data_dirs = [p for p in base_dir.iterdir() if p.is_dir()]
+            if not base_dir.exists() or not data_dirs:
+                raise click.ClickException(f"No data split by acquisition found in directory: {base_dir}")
+        else:
+            raise click.UsageError("You must provide either --project or --data-dir.")
+        
+    if config_dir is None:
+        if project is not None :
+            config_dir = project / "config"
+        else:
+            raise click.UsageError("You must provide either --project or --config-dir.")
+
+    if output_dir is None:
+        if project is not None:
+            output_dir = project / "meta"
+        else:
+            raise click.UsageError("You must provide either --project or --output-dir.")
+
+    create_meta.run(ctx,data_dirs=data_dirs,config_dir=config_dir,output_dir=output_dir,
+                    latitude=latitude, longitude=longitude,constant_depth=constant_depth,station_id=station_id)
+
+
 def main(argv=None):
     cli(prog_name="uvptoolbox", args=argv)
 
