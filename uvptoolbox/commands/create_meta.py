@@ -37,6 +37,33 @@ META_COLUMNS = [
     'constantdepth'
 ]
 
+CONSTANT_FIELDS = [
+    "cruise",
+    "ship",
+    "bottomdepth",
+    "ctdrosettefilename",
+    "latitude",
+    "longitude",
+    "firstimage",
+    "volimage",
+    "aa",
+    "exp",
+    "dn",
+    "winddir",
+    "windspeed",
+    "seastate",
+    "nebuloussness",
+    "comment",
+    "yoyo",
+    "stationid",
+    "sampletype",
+    "integrationtime",
+    "argoid",
+    "pixelsize",
+    "constantdepth"
+]
+
+
 
 def parse_key_value_file(file_path: Path, comment_prefixes: tuple[str, ...] = ("#", "//")) -> dict[str, str]:
     """
@@ -114,61 +141,80 @@ def run(ctx,
     logger.info("Starting create-meta")
     logger.info("Processing %d data folder(s)", len(data_dirs))
     logger.info("Overwrite existing outputs: %s", overwrite)
-    logger.info("Configuration data input directory: %s", config_dir)
+    if config_dir and config_dir.exists():
+        logger.info("Configuration data input directory: %s", config_dir)
+    else:
+        logger.warning("No configuration directory provided or found. Using only defaults and CLI values.")
     # Create output dir if necessary
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
         logger.info("Output directory created: %s", output_dir)
-    
+
+    # Set up constant fields
+
+    #  Default values
+    constant_fields = {key: np.nan for key in CONSTANT_FIELDS}
+    constant_fields["integrationtime"]= 3600
+    constant_fields["sampletype"] = "T"
+
+
     # Search for constant fields values in config files
-    raw_config_info = {}
+    if config_dir and config_dir.exists():
 
-    # in cruise_info.txt
-    cruise_info_file = config_dir / 'cruise_info.txt'
-    if cruise_info_file.exists():
-        logger.info("Using cruise info file: %s", cruise_info_file)
-        raw_config_info.update(parse_key_value_file(cruise_info_file))
-    else:
-        logger.warning("No cruise_info.txt file found in %s", config_dir)
+        # Search for constant fields values in cruise_info.txt
+        cruise_info_file = config_dir / 'cruise_info.txt'
+        if cruise_info_file.exists():
+            logger.info("Using cruise info file: %s", cruise_info_file)
+            cruise_infos = parse_key_value_file(cruise_info_file)
+            # manual adjustments
+            cruise_infos["cruise"] = cruise_infos.get("acron", "UNKNOWN")
+            cruise_infos["stationid"] = cruise_infos.get("acron", "UNKNOWN")
+            # add to constant_fields
+            constant_fields.update({k: v for k, v in cruise_infos.items() if k in CONSTANT_FIELDS})
+        else:
+            logger.warning("No cruise_info.txt file found in %s", config_dir)
 
-    # in HW_....txt file
-    hw_config_file = next(config_dir.rglob("HW_*.txt"), None)
-    if hw_config_file is not None:
-        logger.info("Using HW config file: %s", hw_config_file)
-        raw_config_info.update(parse_key_value_file(hw_config_file))
-    else:
-        logger.warning("No HW config file found in %s", config_dir)
+        # Search for constant fields values in HW_....txt file
+        hw_config_file = next(config_dir.rglob("HW_*.txt"), None)
+        if hw_config_file is not None:
+            logger.info("Using HW config file: %s", hw_config_file)
+            hw_config = parse_key_value_file(hw_config_file)
+            # manual adjustments
+            hw_config["aa"]= to_float_or_nan(hw_config.get("Aa")) / 1_000_000 if hw_config.get("Aa") else np.nan
+            hw_config["exp"] = to_float_or_nan(hw_config.get("Exp")) if hw_config.get("Exp") else np.nan
+            hw_config["pixelsize"] = to_float_or_nan(hw_config.get("Pixel_Size"))/ 1000 if hw_config.get("Pixel_Size") else np.nan
+            # add to constant_fields
+            constant_fields.update({k: v for k, v in hw_config.items() if k in CONSTANT_FIELDS})
+        else:
+            logger.warning("No HW config file found in %s", config_dir)
 
-    constant_fields = {
-        "cruise": raw_config_info.get("acron", "UNKNOWN"),
-        "ship": "mooring",
-        "bottomdepth": np.nan,
-        "ctdrosettefilename": np.nan,
-        "latitude": to_float_or_nan(latitude),
-        "longitude": to_float_or_nan(longitude),
-        "firstimage": 0,
-        "volimage": to_float_or_nan(raw_config_info.get("Image_volume")),
-        "aa": to_float_or_nan(raw_config_info.get("Aa")) / 1_000_000,
-        "exp": to_float_or_nan(raw_config_info.get("Exp")),
-        "dn": np.nan,
-        "winddir": np.nan,
-        "windspeed": np.nan,
-        "seastate": np.nan,
-        "nebuloussness": np.nan,
-        "comment": np.nan,
-        "yoyo": np.nan,
-        "stationid": station_id if station_id else raw_config_info.get("acron", "UNKNOWN"),
-        "sampletype": "T",
-        "integrationtime": 3600,  # WHY ? 
-        "argoid": np.nan,
-        "pixelsize": to_float_or_nan(raw_config_info.get("Pixel_Size")) / 1000,
-        "constantdepth": to_float_or_nan(constant_depth)
-    }
-    
+        # Search for constant fields values in meta_constants.txt, overwriting values found in hw_config_file and cruise_info_file
+        meta_constants_file = next(config_dir.rglob("meta_constants.txt"), None)
+        if meta_constants_file is not None:
+            logger.info("Using meta_constants file: %s", meta_constants_file)
+            meta_constants = parse_key_value_file(meta_constants_file)
+            for k in meta_constants.keys():
+                if k not in CONSTANT_FIELDS:
+                    logger.warning("Unexpected meta constant %s found in %s, ignored", k, meta_constants_file)
+            # add to constant_fields
+            constant_fields.update({k: v for k, v in meta_constants.items() if k in CONSTANT_FIELDS})
+        else:
+            logger.warning("No meta_constants file found in %s", config_dir)
+
+    # Search for constant fields values in cli and overwrite
+    if latitude :
+        constant_fields["latitude"] = latitude
+    if longitude:
+        constant_fields["longitude"] = longitude
+    if constant_depth:
+        constant_fields["constantdepth"] = constant_depth
+    if station_id:
+        constant_fields["stationid"] = station_id
+
     
     for data_dir in data_dirs:
         logger.info("Processing folder: %s", data_dir)
-        output_name = f"{raw_config_info.get('acron', 'UNKNOWN')}_{data_dir.stem}_metadata.txt"
+        output_name = f"{constant_fields.get('cruise')}_{data_dir.stem}_metadata.txt"
         output_file = output_dir / output_name
 
         # Check that we have to create a metadata file

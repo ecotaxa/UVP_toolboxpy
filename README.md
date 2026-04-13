@@ -263,14 +263,17 @@ In project mode all folders inside `<project>/work/by_acquisition` are processed
 ### create-meta
 Create metadata file(s) from merged UVP data files and project configuration files.
 
-This step searches for information in :
-- configuration files (`cruise_info.txt` and `HW_*.txt`) 
-- merged acquisition files (`*Merged*_data.txt`) 
+This step searches for merged acquisition files (`*Merged*_data.txt`) and for each merged file, the command extracts variable fields such as:
+- `filename`
+- `profileid`
+- `endimg`
+- `sampledatetime`
+
+and combines them with constant fields read from:
+- configuration files (`meta_constants.txt` , `cruise_info.txt` and `HW_*.txt`)
 - command-line arguments such as `--latitude`, `--longitude`, `--constant-depth`, and `--station-id`
 
-and creates metadata tables in the historical UVP header format.  
-
-Each row correspond to one merged acquisition, and include fields as :
+The command creates a metadata table were each row correspond to one merged acquisition, and include fields as :
 - `filename`
 - `profileid`
 - `endimg`
@@ -286,6 +289,11 @@ Each row correspond to one merged acquisition, and include fields as :
 ```
 uvptoolbox create-meta -d /path/to/data_folder  -c /path/to/config_folder  -o /path/to/output_folder 
 ```
+- `-d/--data-dir` must point to one folder containing merged UVP data files,
+- `-c/--config-dir` must point to the folder containing configuration files such as cruise_info.txt, HW_*.txt, and optionally meta_constants.txt,
+- `-o/--output-dir` is the directory where the metadata file will be written.
+
+Output metadata files are named as: `<cruise>_<data_folder_name>_metadata.txt`. For example, processing the folder `OBSEA_Off` with `cruise=anerisvilanova` creates: `anerisvilanova_OBSEA_Off_metadata.txt`
 
 Optional argument:   
 - `--latitude` latitude of the mooring in decimal degrees,
@@ -293,6 +301,29 @@ Optional argument:
 - `--constant-depth` constant depth of the mooring in meters,
 - `--station-id` station identifier. If not provided, the cruise acronym is used as a fallback.
 
+Optional configuration file: `meta_constants.txt`
+An optional file named `meta_constants.txt` can be placed in the configuration directory to define or override constant metadata fields.
+
+It uses a simple key=value format, for example:
+```
+ship=mooring
+sampletype=T
+integrationtime=3600
+stationid=OBSEA
+constantdepth=20
+comment=OBSEA mooring time series
+latitude=43.318
+longitude=5.353
+```
+Only constant metadata fields in the following list are taken into account. Unknown keys are ignored with a warning.
+
+cruise, ship, bottomdepth, ctdrosettefilename, latitude, longitude, firstimage, volimage, aa, exp, dn, winddir, windspeed, seastate, nebuloussness, comment, yoyo, stationid, sampletype, integrationtime, argoid, pixelsize, constantdepth
+
+Priority between sources is:
+1. command-line arguments
+2. meta_constants.txt
+3. HW_*.txt and cruise_info.txt
+4. built-in default values
 
 #### Project mode:
 ```
@@ -302,7 +333,16 @@ In project mode:
 - all folders inside `<project>/work/by_acquisition` are processed,
 - the configuration directory defaults to `<project>/config`,
 - the output directory defaults to `<project>/meta`,
-- one metadata file is created for each acquisition-configuration subdirectory.
+- one metadata file is created for each acquisition-configuration subdirectory. For example, if <project>/work/by_acquisition contains `OBSEA_Off/` and `OBSEA_On/` the command will generate one metadata file for each of these folders in `<project>/meta`.
+
+Metadata files are written in the output directory with names of the form: `<cruise>_<acquisition_folder_name>_metadata.txt`. For example if <project>/work/by_acquisition contains `OBSEA_Off/` and `OBSEA_On/`, with `cruise=anerisvilanova` the following files will be created: `anerisvilanova_OBSEA_Off_metadata.txt`, `anerisvilanova_OBSEA_On_metadata.txt`.
+
+#### Notes
+- cruise is read from the acron field in cruise_info.txt when available.
+- volimage, aa, exp, and pixelsize are converted to the units expected in the metadata file if read from the HW_*.txt configuration file.
+- integrationtime is by default kept to 3600 (value used in the original workflow) when not provided in `meta_constants.txt`.
+- If no acquisition lines are found in a merged file, the file is still processed with endimg = 0.
+
 
 ## Current limitations
 

@@ -183,7 +183,9 @@ def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project):
 @click.option("--data-dir", "-d",type=click.Path(exists=True, path_type=Path), default=None,
               help="Directory containing merged UVP data files for one acquisition configuration.")
 @click.option("--config-dir", "-c",type=click.Path(exists=True, path_type=Path),default=None,
-              help="Directory containing project configuration files such as cruise_info.txt and HW_*.txt.")
+              help="Directory containing optional project configuration files such as cruise_info.txt, HW_*.txt, "
+                   "and meta_constants.txt. Constant metadata values are fetched from these files when available. "
+                   "See README for more information.")
 @click.option("--output-dir", "-o",type=click.Path(path_type=Path),default=None,
               help="Output directory where metadata file(s) will be writen.")
 @click.option("--latitude",type=str,default=None,help="Latitude of the mooring in decimal degrees.")
@@ -213,18 +215,16 @@ def create_meta_cmd(ctx,data_dir,config_dir,output_dir,latitude,longitude,consta
                 raise click.ClickException(f"No data split by acquisition found in directory: {base_dir}")
         else:
             raise click.UsageError("You must provide either --project or --data-dir.")
-        
-    if config_dir is None:
-        if project is not None :
-            config_dir = project / "config"
-        else:
-            raise click.UsageError("You must provide either --project or --config-dir.")
 
     if output_dir is None:
         if project is not None:
             output_dir = project / "meta"
         else:
             raise click.UsageError("You must provide either --project or --output-dir.")
+
+    if config_dir is None:
+        if project is not None :
+            config_dir = project / "config"
 
     create_meta.run(ctx,data_dirs=data_dirs,config_dir=config_dir,output_dir=output_dir,
                     latitude=latitude, longitude=longitude,constant_depth=constant_depth,station_id=station_id)
