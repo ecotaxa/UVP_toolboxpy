@@ -106,7 +106,7 @@ uvptoolbox acquisition-split -p /path/to/project
 uvptoolbox time-merge -p /path/to/project --by-day 
 
 # Create metadata file(s) from merged UVP data files and project configuration files.
-uvptoolbox create-meta -p /path/to/project --latitude XX.XXXX --longitude XX.XXXX --constant-depth XX.X 
+uvptoolbox create-meta -p /path/to/project 
 ```
 
 ## Detail commands usage
