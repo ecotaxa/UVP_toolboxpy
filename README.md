@@ -322,7 +322,7 @@ Metadata files are written in the output directory with names of the form: `<cru
 
 #### Notes
 - cruise is read from the acron field in cruise_info.txt when available.
-- volimage, aa, exp, and pixelsize are converted to the units expected in the metadata file if read from the HW_*.txt configuration file.
+- volimage, aa, exp, and pixelsize are converted to the units expected in the metadata file if read from the `HW_*.txt` configuration file.
 - integrationtime is by default kept to 3600 (value used in the original workflow) when not provided in `meta_constants.txt`.
 - If no acquisition lines are found in a merged file, the file is still processed with endimg = 0.
 
