@@ -102,6 +102,26 @@ def convert_format_cmd(ctx, data_dir, project):
     convert_format.run( ctx, data_dir=data_dir)
 
 
+@cli.command(name="acquisition-info")
+@click.option("--input-dir", "-i", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Input directory containing acquisition folders or UVP data files to inspect.")
+@click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Project directory for project mode. If --input-dir is not provided, it is set to <project>/work/all.")
+@click.pass_context
+def acquisition_info_cmd(ctx, input_dir, project):
+    """Inspect acquisition configurations found in UVP data files."""
+    from uvptoolbox.commands import acquisition_info
+
+    if input_dir is None:
+        if project is not None :
+            input_dir = project / "work" / "all"
+        else:
+            raise click.UsageError("You must provide either --project or --input-dir.")
+
+    acquisition_info.run(ctx, input_dir=input_dir)
+
+
+
 @cli.command(name="acquisition-split")
 @click.option("--input-dir", "-i", type=click.Path(exists=True, path_type=Path), default=None,
               help="Input directory containing acquisition folders to split.")
@@ -140,6 +160,32 @@ def acquisition_split_cmd(ctx, input_dir, output_dir, config_file, project):
         config_file = project / "config" / "acquisition_configs.csv"
     
     acquisition_split.run(ctx, input_dir=input_dir, output_dir=output_dir, config_file=config_file)
+
+
+@cli.command(name="time-info")
+@click.option("--data-dir", "-d", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Directory containing UVP data files to inspect.")
+@click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Project directory for project mode. Project directory for project mode. If data-dir is not provided explicitly, all folders in <project>/work/by_acquisition will be inspected")
+@click.pass_context
+def time_info_cmd(ctx, data_dir, project):
+    """Summarize the time coverage of UVP data files in a directory or a work directory of a project."""
+    from uvptoolbox.commands import time_info
+
+    data_dirs = []
+    if data_dir is not None:
+        data_dirs = [data_dir]
+    else:
+        if project is not None:
+            base_dir = project / "work" / "by_acquisition"
+            if base_dir.exists():
+                data_dirs = [p for p in base_dir.iterdir() if p.is_dir()]
+            if not base_dir.exists() or not data_dirs:
+                raise click.ClickException(f"No data split by acquisition found in directory: {base_dir}")
+        else:
+            raise click.UsageError("You must provide either --project or --data-dir.")
+
+    time_info.run(ctx, data_dirs=data_dirs)
 
 
 @cli.command(name="time-merge")
