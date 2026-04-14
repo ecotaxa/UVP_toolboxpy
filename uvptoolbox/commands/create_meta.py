@@ -124,6 +124,24 @@ def extract_variable_meta_from_merged_file(merged_file: Path, cruise_value: str,
         "sampledatetime": first_datetime[0] + "-" + first_datetime[1],
     }
 
+def merge_metadata(existing_df: pd.DataFrame, new_df: pd.DataFrame) -> pd.DataFrame:
+    """Merge existing and new metadata rows, keeping one row per filename."""
+
+    # Make sure all columns are present if the existing file is older/incomplete
+    for col in META_COLUMNS:
+        if col not in existing_df.columns:
+            existing_df[col] = np.nan
+    existing_df = existing_df[META_COLUMNS]
+
+    df = pd.concat([existing_df, new_df], ignore_index=True)
+    # Keep the newest version of a row if the same filename appears twice
+    df = df.drop_duplicates(subset=["filename"], keep="last")
+    # Restore expected column order when possible
+    df = df[META_COLUMNS]
+    # Sort rows for readability
+    df = df.sort_values(by="sampledatetime")
+    return df
+
 def run(ctx,
         data_dirs: list[Path],
         config_dir: Path,
@@ -217,11 +235,6 @@ def run(ctx,
         output_name = f"{constant_fields.get('cruise')}_{data_dir.stem}_metadata.txt"
         output_file = output_dir / output_name
 
-        # Check that we have to create a metadata file
-        if output_file.exists() and not overwrite:
-            logger.info("Output file already exists, skipped: %s", output_file)
-            continue
-
         # Make sure we have access to input data
         if not data_dir.exists():
             raise click.ClickException(f"Data directory does not exist: {data_dir}")
@@ -242,15 +255,38 @@ def run(ctx,
             rows.append(row)
 
         # Convert to Dataframe
-        df = pd.DataFrame(rows)
-        df = df[META_COLUMNS] # sort columns
-        df = df.sort_values(by="sampledatetime") # sort rows
+        df_new = pd.DataFrame(rows)
+        df_new = df_new[META_COLUMNS] # sort columns
+        df_new = df_new.sort_values(by="sampledatetime") # sort rows
+
+        # If a metadata file already exists:
+        # - with --overwrite: rebuild it entirely from current data
+        # - without --overwrite: merge existing rows with newly generated rows
+
+        if output_file.exists():
+            if overwrite:
+                df_final = df_new
+                logger.info("Rebuilding metadata file from current data: %s", output_file)
+            else:
+                try:
+                    df_existing = pd.read_csv(output_file, sep=";")
+                except Exception as e:
+                    raise click.ClickException(f"Unable to read existing metadata file: {output_file}") from e
+
+                df_final = merge_metadata(df_existing, df_new)
+
+                logger.info(
+                    "Updated existing metadata file: %s (%d existing rows + %d new rows -> %d rows after removing duplicates)",
+                    output_file,len(df_existing),len(df_new),len(df_final))
+        else:
+            df_final = df_new
 
         # Write output
         try:
-            df.to_csv(output_file, sep=";", index=False, na_rep="nan")
+            df_final.to_csv(output_file, sep=";", index=False, na_rep="nan")
             logger.info("Metadata file written: %s", output_file)
         except Exception as e:
             raise click.ClickException(f"Unable to write metadata file: {output_file}") from e
+
 
     logger.info("Finished create-meta")

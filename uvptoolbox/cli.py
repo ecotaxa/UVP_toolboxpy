@@ -245,7 +245,7 @@ def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project):
                    "--config-dir is set to <project>/config, --output-dir is set to <project>/meta")
 @click.pass_context
 def create_meta_cmd(ctx,data_dir,config_dir,output_dir,latitude,longitude,constant_depth,station_id,project):
-    """Create metadata file(s) from merged UVP data files and project configuration files."""
+    """Create or update metadata file(s) from merged UVP data files and project configuration files."""
     from uvptoolbox.commands import create_meta
 
 

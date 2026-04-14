@@ -186,6 +186,22 @@ uvptoolbox convert-format -p /path/to/project
 ```
 Default working directory in project mode is set to `<project>/work/all`.
 
+### acquisition-info
+Inspect acquisition configurations found in UVP data files. It is mainly intended as a helper command to inspect available acquisition settings before running `acquisition-split`. It can also help prepare an acquisition_configs.csv file.
+
+This command does not create or modify any file.
+
+This command reads `*_data.txt` files recursively, extracts their acquisition parameters from the `ACQ` line, and reports the unique acquisition configurations detected in the input directory.
+
+#### Standalone mode:
+```
+uvptoolbox acquisition-info -i /path/to/data_dir
+```
+#### Project mode:
+```
+uvptoolbox acquisition-info -p /path/to/project
+```
+In project mode the input directory defaults to `<project>/work/all.
 
 ### acquisition-split
 Split UVP acquisitions folders into one folder per acquisition configuration.
@@ -227,6 +243,28 @@ Default arguments in project mode:
 - output : `<project>/work/by_acquisition`
 - config file : `<project>/config/by_acquisition_configs.csv`
 
+### time-info
+Summarize the time coverage of UVP data files in a directory. It is mainly intended as a helper command to inspect available data and choose a suitable arguments for running `time-merge`.
+
+This command does not create or modify any file.
+
+This command inspects `*_data.txt` files and reports:
+- the number of data files found,
+- how many correspond to raw acquisition files,
+- how many are already renamed with `_UsedForMerge`,
+- the total number of records found,
+- the first and last datetimes,
+- the number of covered days.
+
+#### Standalone mode:
+```
+uvptoolbox time-info -d /path/to/data_dir
+```
+#### Project mode:
+```
+uvptoolbox time-info -p /path/to/project
+```
+In project mode all folders inside `<project>/work/by_acquisition` are inspected individually.
 
 ### time-merge
 Merge acquisitions by time step or by day, and copy corresponding vignettes.
@@ -264,13 +302,17 @@ In project mode all folders inside `<project>/work/by_acquisition` are processed
 
 
 ### create-meta
-Create metadata file(s) from merged UVP data files and project configuration files.
+Create or update metadata file(s) from merged UVP data files and project configuration files.
 
-This step searches for merged acquisition files (`*Merged*_data.txt`) and for each merged file, the command extracts variable fields (such as: filename, profileid, endimg, sampledatetime) and combines them with constant fields read from:
-- configuration files (`meta_constants.txt` , `cruise_info.txt` and `HW_*.txt`)
+This step searches for merged acquisition files (`*Merged*_data.txt`). For each merged file, the command extracts variable fields such as `filename`, `profileid`, `endimg`, and `sampledatetime`, and combines them with constant fields read from:
+- configuration files (`meta_constants.txt`, `cruise_info.txt`, and `HW_*.txt`)
 - command-line arguments such as `--latitude`, `--longitude`, `--constant-depth`, and `--station-id`
 
-The command creates a metadata table were each row correspond to one merged acquisition, and include fields as : filename, profileid, endimg, sampledatetime, pixelsize, latitude, longitude, constantdepth ...
+The command creates a metadata table in which each row corresponds to one merged acquisition and includes fields such as `filename`, `profileid`, `endimg`, `sampledatetime`, `pixelsize`, `latitude`, `longitude`, and `constantdepth`.
+
+If the metadata file already exists:
+- with `--overwrite`, it is fully rebuilt from the current data
+- without `--overwrite`, new rows are merged with the existing file and duplicate entries are updated
 
 #### Standalone mode:
 
