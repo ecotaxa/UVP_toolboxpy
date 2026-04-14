@@ -229,6 +229,40 @@ def create_meta_cmd(ctx,data_dir,config_dir,output_dir,latitude,longitude,consta
     create_meta.run(ctx,data_dirs=data_dirs,config_dir=config_dir,output_dir=output_dir,
                     latitude=latitude, longitude=longitude,constant_depth=constant_depth,station_id=station_id)
 
+@cli.command(name="export-results")
+@click.option("--input-dir", "-i",type=click.Path(exists=True, path_type=Path),default=None,
+              help="Input directory containing merged acquisition folders to export.")
+@click.option("--output-dir", "-o",type=click.Path(path_type=Path),default=None,
+              help="Output directory where merged acquisition folders will be copied.")
+@click.option("--processed-acquisitions-file", type=click.Path(path_type=Path),default=None,
+              help="Optional text file to update with processed acquisitions (used for merged).")
+@click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Project directory for project mode. If not provided explicitly: "
+                   "--input-dir is set to <project>/work/by_acquisition, "
+                   "--output-dir is set to <project>/processed, "
+                   "--processed-acquisitions-file is set to <project>/logs/processed_acquisitions.txt.")
+@click.pass_context
+def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, project):
+    """Export merged acquisition folders to a destination directory."""
+    from uvptoolbox.commands import export_results
+
+    if input_dir is None:
+        if project is not None:
+            input_dir = project / "work" / "by_acquisition"
+        else:
+            raise click.UsageError("You must provide either --project or --input-dir.")
+
+    if output_dir is None:
+        if project is not None:
+            output_dir = project / "processed"
+        else:
+            raise click.UsageError("You must provide either --project or --output-dir.")
+
+    if processed_acquisitions_file is None and project is not None:
+        processed_acquisitions_file = project / "logs" / "processed_acquisitions.txt"
+
+    export_results.run(ctx, input_dir=input_dir, output_dir=output_dir, processed_acquisitions_file=processed_acquisitions_file)
+
 
 def main(argv=None):
     cli(prog_name="uvptoolbox", args=argv)

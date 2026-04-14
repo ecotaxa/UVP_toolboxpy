@@ -107,6 +107,9 @@ uvptoolbox time-merge -p /path/to/project --by-day
 
 # Create metadata file(s) from merged UVP data files and project configuration files.
 uvptoolbox create-meta -p /path/to/project 
+
+# Export processed data to `<project>/processed
+uvptoolbox export-results -p /path/to/project
 ```
 
 ## Detail commands usage
@@ -326,9 +329,66 @@ Metadata files are written in the output directory with names of the form: `<cru
 - integrationtime is by default kept to 3600 (value used in the original workflow) when not provided in `meta_constants.txt`.
 - If no acquisition lines are found in a merged file, the file is still processed with endimg = 0.
 
+### export-results
+Export processed data by copying merged acquisition folders to a destination directory.
+
+This step searches recursively for folders named `*_Merged` in the input directory and copies them to the output directory while preserving their relative tree structure.  
+Folders named `*_UsedForMerge` are not exported.
+
+Optionally, the command can also update a text file listing the raw acquisition folders that have already been processed and exported.
+
+#### Standalone mode:
+```
+uvptoolbox export-results -i /path/to/input -o /path/to/output
+```
+In standalone mode:
+- `-i/--input-dir` must point to a directory containing merged acquisition folders,
+- `-o/--output-dir` is the directory where merged folders will be copied.
+
+Optional argument:
+- `--processed-acquisitions-file path to a text file that will be updated with processed acquisition names. If --processed-acquisitions-file is provided, the command searches for folders named *_UsedForMerge in the input directory and appends their corresponding raw acquisition names (YYYYMMDD-HHMMSS) to the file. This can be useful to keep track of acquisitions already exported and avoid reprocessing them in future runs.
+
+#### Project mode:
+
+```
+uvptoolbox export-results -p /path/to/project
+```
+
+In project mode:
+- the input directory defaults to `<project>/work/by_acquisition`,
+- the output directory defaults to `<project>/processed`,
+- the processed acquisitions file defaults to `<project>/logs/processed_acquisitions.txt.
+
+#### Notes
+The command preserves the relative tree structure of the input directory.
+
+For example, if the input directory contains:
+```
+work/by_acquisition/
+    OBSEA_Off/
+        20250709-000000_Merged/
+        20250709-000000_UsedForMerge/
+        20250709-010000_UsedForMerge/
+        20250710-000000_Merged/
+        20250710-000000_UsedForMerge/
+        20250710-010000_UsedForMerge/
+    OBSEA_On/
+        20250709-000000_Merged/
+        ...
+```
+
+the exported output directory will contain:
+```
+processed/
+    OBSEA_Off/
+        20250709-000000_Merged/
+        20250710-000000_Merged/
+    OBSEA_On/
+        20250709-000000_Merged/
+        ...
+```
+
 
 ## Current limitations
-
-Export/copy commands to external “final” UVP projects is still under development. 
 The package is under active refactoring; command names and options may still evolve.
 
