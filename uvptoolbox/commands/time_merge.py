@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 import shutil
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from uvptoolbox.utils import setup_logger, ACQUISITION_FOLDER_PATTERN
 
 
@@ -281,7 +282,8 @@ def run(ctx,
         data_dirs: list[Path],
         by_day: bool = True,
         start_datetime: str = None,
-        time_step: float = None):
+        time_step: float = None,
+        threads: int = 1):
     """Merge acquisitions by time step or by day, and copy corresponding vignettes."""
 
     logger = setup_logger("uvptoolbox.time_merge", debug=ctx.obj.get("debug", False))
@@ -297,6 +299,8 @@ def run(ctx,
         logger.info("Merging acquisitions by day.")
     if start_datetime:
         logger.info("Acquisitions before %s will not be considered.", start_datetime)
+    if threads > 1:
+        logger.info("Parallel threads for vignette copy: %d", threads)
     
     for data_dir in data_dirs:
         logger.info("Processing folder: %s", data_dir)
@@ -346,8 +350,8 @@ def run(ctx,
         vig_list = [vig for vig in data_dir.rglob("*.vig") if "_Merged" not in str(vig)]
         vig_index = build_vig_index(vig_list)
 
-        for merged_file in merged_files:
-            copy_vignettes_for_merged_file(merged_file,vig_index,logger=logger,overwrite=overwrite)
+        with ThreadPoolExecutor(max_workers=threads) as executor:
+            list(executor.map(lambda merged_file: copy_vignettes_for_merged_file(merged_file, vig_index, logger=logger, overwrite=overwrite), merged_files))
 
     logger.info("Finished time-merge")
 

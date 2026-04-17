@@ -1,8 +1,10 @@
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+
 from uvptoolbox.utils import setup_logger, find_acquisition_folders, copy_acquisition_folder
 
 
-def run(ctx, input_dir: Path, output_dir: Path):
+def run(ctx, input_dir: Path, output_dir: Path, threads: int):
     """Copy acquisition folders named YYYYMMDD-HHMMSS from an input directory to an output directory.
     Only new acquisitions are copied unless --overwrite is specified."""
     logger = setup_logger("uvptoolbox.load_new_data", debug=ctx.obj.get("debug", False))
@@ -13,6 +15,8 @@ def run(ctx, input_dir: Path, output_dir: Path):
     logger.info("Input directory: %s", input_dir)
     logger.info("Output directory: %s", output_dir)
     logger.info("Overwriting already present acquisition: %s", overwrite)
+    if threads > 1:
+        logger.info("Parallel threads: %d", threads)
 
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
@@ -27,11 +31,10 @@ def run(ctx, input_dir: Path, output_dir: Path):
     logger.info("Found %d acquisition folders", len(acquisition_folders))
 
     counters = {"copied": 0, "skipped": 0, "replaced": 0}
-
-    for folder in acquisition_folders:
-        dest = output_dir / folder.name
-        result = copy_acquisition_folder(folder, dest, logger=logger, overwrite=overwrite)
-        counters[result] += 1
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        results = executor.map(lambda folder:copy_acquisition_folder(folder, output_dir / folder.name, logger=logger, overwrite=overwrite),acquisition_folders)
+        for result in results:
+            counters[result] += 1
 
     logger.info(
         "Finished load-new-data: %d copied, %d skipped, %d replaced",

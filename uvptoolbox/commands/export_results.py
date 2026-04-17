@@ -1,5 +1,6 @@
 from pathlib import Path
 import click
+from concurrent.futures import ThreadPoolExecutor
 from uvptoolbox.utils import setup_logger, copy_acquisition_folder
 
 def append_processed_acquisitions(processed_file: Path, acquisition_names: set[str]) -> None:
@@ -13,7 +14,8 @@ def append_processed_acquisitions(processed_file: Path, acquisition_names: set[s
 def run(ctx,
         input_dir: Path,
         output_dir: Path,
-        processed_acquisitions_file: Path = None):
+        processed_acquisitions_file: Path = None,
+        threads: int = 1):
     """Export processed data (merged acquisition folders)."""
 
     logger = setup_logger("uvptoolbox.export_results", debug=ctx.obj.get("debug", False))
@@ -27,6 +29,8 @@ def run(ctx,
     logger.info("Input directory: %s", input_dir)
     logger.info("Output directory: %s", output_dir)
     logger.info("Overwrite existing outputs: %s", overwrite)
+    if threads > 1:
+        logger.info("Parallel threads: %d", threads)
 
     merged_folders = [p for p in input_dir.rglob("*_Merged") if p.is_dir()]
     if not merged_folders:
@@ -34,14 +38,13 @@ def run(ctx,
         return 
     logger.info("Number of found merged acquisition folders: %d", len(merged_folders))
 
-    counters = {"copied": 0, "skipped": 0, "replaced": 0}
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for folder in merged_folders:
-        relative_path = folder.relative_to(input_dir)
-        dest = output_dir / relative_path
-        result = copy_acquisition_folder(folder, dest, logger=logger, overwrite=overwrite)
-        counters[result] += 1
+    counters = {"copied": 0, "skipped": 0, "replaced": 0}
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        results = executor.map(lambda folder: copy_acquisition_folder(folder, output_dir / folder.relative_to(input_dir), logger=logger, overwrite=overwrite), merged_folders)
+        for result in results:
+            counters[result] += 1
 
     logger.info(
         "Exported %s merged data: %d copied, %d skipped, %d replaced",

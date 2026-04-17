@@ -17,6 +17,7 @@ from pathlib import Path
 import shutil 
 import re
 import click
+from concurrent.futures import ThreadPoolExecutor
 from uvptoolbox.utils import setup_logger
 
 
@@ -75,7 +76,7 @@ def standardize_uvp_data_format(file_path: Path, logger):
 
         if hw_line is None or acq_line is None:
             logger.warning("HW or ACQ lines not found or with unexpected format, skipping: %s", file_path)
-            return None
+            return "failed"
 
         old_file_path = file_path.with_name(file_path.stem + "_2023format.txt")
         shutil.move(file_path, old_file_path)
@@ -88,11 +89,13 @@ def standardize_uvp_data_format(file_path: Path, logger):
             f.write("\n".join(data_lines) + "\n")
 
         logger.debug("Converted: %s", file_path.name)
+        return "converted"
     except Exception as e:
         logger.error("Error processing %s: %s", file_path, e)
+        return "failed"
 
 
-def run(ctx, data_dir: Path):
+def run(ctx, data_dir: Path, threads: int = 1):
     """Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. Conversion is done in place."""
     logger = setup_logger("uvptoolbox.convert_format", debug=ctx.obj.get("debug", False))
     
@@ -101,12 +104,12 @@ def run(ctx, data_dir: Path):
     logger.info("Starting convert-format")
     logger.info("Working on files in: %s", data_dir)
     logger.info("Overwriting (re-converting already converted files from archives when possible): %s", overwrite)
+    if threads > 1:
+        logger.info("Parallel threads: %d", threads)
 
     # Check that we have access to the data
     if not data_dir.exists():
         raise click.ClickException(f"Provided directory does not exist: {data_dir}")
-
-    counters = {"converted": 0, "skipped": 0, "reconverted": 0}
 
     data_files = list(data_dir.rglob("*_data.txt"))
 
@@ -114,25 +117,35 @@ def run(ctx, data_dir: Path):
         logger.warning("No acquisition data files found in %s", data_dir)
         return
 
-    for file_path in data_files:
+
+    def convert_one(file_path: Path):
         archived_file = file_path.with_name(file_path.stem + "_2023format.txt")
-        if not archived_file.exists(): 
-            standardize_uvp_data_format(file_path, logger=logger)
-            counters["converted"] += 1
+        if not archived_file.exists():
+            status_result = standardize_uvp_data_format(file_path, logger=logger)
         elif overwrite:
             logger.info("Re-converting from archived original: %s", archived_file.name)
             shutil.copyfile(archived_file, file_path)
-            standardize_uvp_data_format(file_path, logger=logger)
-            counters["reconverted"] += 1
+            status_result = standardize_uvp_data_format(file_path, logger=logger)
+            if status_result == "converted" :
+                status_result = "reconverted"
         else:
             logger.debug("Skipping already converted file: %s", file_path.name)
-            counters["skipped"] += 1
+            status_result = "skipped"
+        return status_result
+
+    counters = {"converted": 0, "skipped": 0, "reconverted": 0, "failed": 0}
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        results = executor.map(lambda file_path: convert_one(file_path), data_files)
+        for result in results:
+            counters[result] += 1
 
     logger.info(
-        "Finished convert-format: %d converted, %d skipped, %d re-converted",
+        "Finished convert-format: %d converted, %d skipped, %d re-converted, %d failed",
         counters["converted"],
         counters["skipped"],
         counters["reconverted"],
+        counters["failed"],
     )
+
 
 

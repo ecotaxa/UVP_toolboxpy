@@ -1,6 +1,8 @@
 import shutil
 from pathlib import Path
 import click
+from concurrent.futures import ThreadPoolExecutor
+
 from uvptoolbox.utils import setup_logger, find_acquisition_folders, copy_acquisition_folder
 
 def empty_folder(folder_path: Path):
@@ -31,7 +33,8 @@ def run(ctx,
         output_dir : Path,
         reset_work_dir : bool =False,
         skip_some_acquisitions: bool = True,
-        acquisitions_to_skip_file: Path = None):
+        acquisitions_to_skip_file: Path = None,
+        threads: int = 1):
     
     """Prepare work/all and copy selected acquisition folders into it."""
 
@@ -62,7 +65,9 @@ def run(ctx,
     if not reset_work_dir:
         logger.info("Overwriting already present acquisitions: %s", overwrite)
     if acq_to_skip :
-        logger.info("Skipping acquisitions: %s", ", ".join(acq_to_skip))
+        logger.info("Skipping acquisitions: %s", ", ".join(sorted(acq_to_skip)))
+    if threads > 1:
+        logger.info("Parallel threads: %d", threads)
 
     # Create or clean work and work/all directories if needed
     if reset_work_dir:
@@ -85,11 +90,11 @@ def run(ctx,
         logger.info("Found %d acquisition folders to process", len(acquisition_folders))
 
     counters = {"copied": 0, "skipped": 0, "replaced": 0}
-
-    for folder in acquisition_folders:
-        dest = work_all_dir / folder.name
-        result = copy_acquisition_folder(folder, dest, logger=logger, overwrite=overwrite)
-        counters[result] += 1
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        results = executor.map(lambda folder: copy_acquisition_folder(folder, work_all_dir / folder.name, logger=logger,
+                                                                      overwrite=overwrite), acquisition_folders)
+        for result in results:
+            counters[result] += 1
 
     logger.info(
         "Acquisitions import completed: %d copied, %d skipped, %d replaced",
@@ -99,4 +104,5 @@ def run(ctx,
     )
 
     logger.info("Finished start-process")
+
 

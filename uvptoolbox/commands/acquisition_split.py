@@ -2,8 +2,10 @@ import logging
 from collections import defaultdict
 from pathlib import Path
 import pandas as pd
-from uvptoolbox.utils import setup_logger, copy_acquisition_folder
 import click
+from concurrent.futures import ThreadPoolExecutor
+from uvptoolbox.utils import setup_logger, copy_acquisition_folder
+
 
 
 def extract_acquisition_parameters(data_files : list[Path], logger : logging.Logger) -> pd.DataFrame:
@@ -104,15 +106,22 @@ def get_provided_acquisition_configs_folders(acq_df : pd.DataFrame, config_file 
 
 
 
-def copy_acquisitions_to_config_folders(acq_df : pd.DataFrame, input_dir : Path, logger : logging.Logger, overwrite : bool) -> dict:
-    """ Copy each acquisition folder into its corresponding acquisition configuration folder. """
+def copy_acquisitions_to_config_folders(acq_df: pd.DataFrame, input_dir : Path, logger : logging.Logger, overwrite : bool, threads: int = 1) -> dict:
+    """Copy each acquisition folder into its corresponding acquisition configuration folder."""
     counters = defaultdict(lambda: {"copied": 0, "skipped": 0, "replaced": 0})
-    for _, row in acq_df.iterrows():
-        source =  input_dir/ row["datetime"]
+
+    def copy_one(row) -> tuple[str, str]:
+        source = input_dir / row["datetime"]
         folder_name = row["folder_name"]
         dest = Path(row["folder"]) / source.name
-        status = copy_acquisition_folder(source, dest, logger, overwrite)
-        counters[folder_name][status] += 1
+        status_result = copy_acquisition_folder(source, dest, logger, overwrite)
+        return folder_name, status_result
+
+    rows = [row for _, row in acq_df.iterrows()]
+
+    with ThreadPoolExecutor(max_workers=threads) as executor:
+        for folder, status in executor.map(copy_one, rows):
+            counters[folder][status] += 1
 
     return counters
 
@@ -126,7 +135,8 @@ def write_detected_acquisition_configs(unique_configs : pd.DataFrame, config_fil
 def run(ctx,
         input_dir: Path,
         output_dir: Path,
-        config_file: Path = None):
+        config_file: Path = None,
+        threads: int = 1):
     """Split UVP acquisitions folders into one folder per acquisition configuration."""
     
     logger = setup_logger("uvptoolbox.acquisition_split", debug=ctx.obj.get("debug", False))
@@ -138,6 +148,8 @@ def run(ctx,
     logger.info("Input data folder: %s", input_dir)
     logger.info("Output data folder: %s", output_dir)
     logger.info("Overwriting in output folder: %s", overwrite)
+    if threads > 1:
+        logger.info("Parallel threads: %d", threads)
 
 
     # Make sure we have access to input data
@@ -186,7 +198,7 @@ def run(ctx,
         folder.mkdir(parents=True, exist_ok=True)
 
     # Copy acquisitions to the appropriate folders
-    counters = copy_acquisitions_to_config_folders(acq_df, input_dir, logger, overwrite)
+    counters = copy_acquisitions_to_config_folders(acq_df, input_dir, logger, overwrite, threads=threads)
 
     logger.info("Created / updated by-acquisition folders:")
 
