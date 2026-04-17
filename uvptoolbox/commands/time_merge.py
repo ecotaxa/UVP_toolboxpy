@@ -282,13 +282,13 @@ def run(ctx,
         data_dirs: list[Path],
         by_day: bool = True,
         start_datetime: str = None,
-        time_step: float = None,
-        threads: int = 1):
+        time_step: float = None):
     """Merge acquisitions by time step or by day, and copy corresponding vignettes."""
 
     logger = setup_logger("uvptoolbox.time_merge", debug=ctx.obj.get("debug", False))
 
     overwrite = ctx.obj.get("overwrite", False)
+    threads = ctx.obj.get("threads", 1)
 
     logger.info("Starting time-merge")
     logger.info("Processing %d acquisition setup folder(s)", len(data_dirs))

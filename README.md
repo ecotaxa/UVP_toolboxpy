@@ -5,15 +5,13 @@ Python package and command-line tool to process UVP6 mooring data.
 Following a long acquisition with the UVP6, you may need to create samples grouping data by time or acquisition parameters. 
 `UVPtoolbox` helps simplify these operations and prepare UVP6 acquisitions for downstream workflows by:
 - loading new acquisition folders from a source into a project,
-- preparing a working directory and copy the folders to be processed into it,
+- preparing a working directory and copying the folders to be processed into it,
 - converting `data.txt` files from the 2023 format to the 2021 format expected by downstream tools,
 - splitting acquisitions by acquisition configuration,
 - merging acquisitions by time step or by day, with associated vignette copying,
 - creating the metadata dataframe associated with the processed data,
+- exporting processed merged results to a final directory.
 
-The following steps are planned but not fully implemented yet:
-
-- exporting results to other UVP projects.
 
 ## Installation
 
@@ -54,8 +52,9 @@ uvptoolbox [GLOBAL_OPTIONS] command [COMMAND_OPTIONS]
 
 Global options currently include:
 ```
-  --debug      Show debugging messages.
-  --overwrite  Overwrite existing outputs.
+  --debug       Show debugging messages.
+  --overwrite   Overwrite existing outputs.
+  --threads/-T  Number of parallel threads to use. Default: 1.
 ```
 
 To see the list of available commands:
@@ -77,38 +76,47 @@ A project corresponds conceptually to a cruise, a time series, etc. In practice,
 Typical structure:
 ```
 my_project/
-    raw/                                folders storing all raw acquisition 
+    raw/                                folders storing all raw acquisitions 
     work/                               data created by the various processing steps
         all/                            acquisitions selected for processing
         by_acquisition/                 acquisitions split by acquisition configuration
+    processed/                          exported merged acquisition folders
     config/                             configuration files
-        by_acquisition_configs.csv      optional acquisition split configuration file
+        acquisition_configs.csv         optional acquisition split configuration file
+        cruise_info.txt                 optional file containing general mooring informations
+        HW_[...].txt                    optional file containing hardware acquisition configuration parameters
+        meta_constants.txt              optional file containing constant metadata fields (see seciion create-meta)
     logs/                               optional log and bookkeeping files
     meta/                               metadata outputs 
 ```
 ### Minimal workflow in project mode
 
-To run the current processing pipeline step by step in a project:
+A default end-to-end workflow command looks like:
+```
+uvptoolbox run-default-pipeline -p /path/to/project -i /path/to/source --by-day
+```
+
+The commands underlying this automatic processing pipeline can be run step by step independently in a project:
 ```
 # Copy acquisition folders from a source input directory to the raw directory of a project (<project>/raw`).
 uvptoolbox load-new-data -i /path/to/source -p /path/to/project
 
-# Prepare a work directory and copy acquisitions not already processed from `<project>/raw` to `<project>/work/all.
+# Prepare a work directory and copy acquisitions not already processed from `<project>/raw` to `<project>/work/all`.
 uvptoolbox start-process -p /path/to/project
 
 # Convert UVP6 data.txt files in `<project>/work/all` from the 2023 format to the 2021 format expected downstream.
 uvptoolbox convert-format -p /path/to/project
 
-# Split acquisitions into one folder per acquisition configuration.
+# Split acquisitions in `<project>/work/all` into one folder per acquisition configuration and store them in `<project>/work/by_acquisition`.
 uvptoolbox acquisition-split -p /path/to/project
 
-# Merge acquisitions by day or by fixed time step, and copy corresponding vignettes.
+# Merge acquisitions in each `<project>/work/by_acquisition` by day, and copy corresponding vignettes.
 uvptoolbox time-merge -p /path/to/project --by-day 
 
-# Create metadata file(s) from merged UVP data files and project configuration files.
+# Create or update metadata file(s) in `<project>/meta` from merged UVP data files and project configuration files.
 uvptoolbox create-meta -p /path/to/project 
 
-# Export processed data to `<project>/processed
+# Export processed data to `<project>/processed`
 uvptoolbox export-results -p /path/to/project
 ```
 
@@ -241,10 +249,10 @@ uvptoolbox acquisition-split -p /path/to/project
 Default arguments in project mode:
 - input : `<project>/work/all`
 - output : `<project>/work/by_acquisition`
-- config file : `<project>/config/by_acquisition_configs.csv`
+- config file : `<project>/config/acquisition_configs.csv`
 
 ### time-info
-Summarize the time coverage of UVP data files in a directory. It is mainly intended as a helper command to inspect available data and choose a suitable arguments for running `time-merge`.
+Summarize the time coverage of UVP data files in a directory. It is mainly intended as a helper command to inspect available data and choose suitable arguments for running `time-merge`.
 
 This command does not create or modify any file.
 
@@ -284,7 +292,7 @@ If neither --by-day nor --time-step is explicitly provided, daily merging is use
 
 Optional argument:   
 
-`--start-datetime` Time in format `YYYYMMDD- HHMMSS`. 
+`--start-datetime` Time in format `YYYYMMDD-HHMMSS`. 
 
 - In `--time-step` mode, binning starts from this datetime. Default : the earliest datetime found in the data. 
 - In `--time-step` or `--by-day` mode, acquisitions before this datetime are ignored. 
@@ -359,7 +367,7 @@ Priority between sources is:
 uvptoolbox create-meta -p /path/to/project
 ```
 In project mode:
-- all folders inside `<project>/work/by_acquisition` are processed. one metadata file is created for each acquisition-configuration subdirectory. For example, if `<project>/work/by_acquisition` contains `OBSEA_Off/` and `OBSEA_On/` the command will generate one metadata file for each of these folders.
+- all folders inside `<project>/work/by_acquisition` are processed. One metadata file is created for each acquisition-configuration subdirectory. For example, if `<project>/work/by_acquisition` contains `OBSEA_Off/` and `OBSEA_On/` the command will generate one metadata file for each of these folders.
 - the configuration directory defaults to `<project>/config`,
 - the output directory defaults to `<project>/meta`.
 
@@ -388,7 +396,7 @@ In standalone mode:
 - `-o/--output-dir` is the directory where merged folders will be copied.
 
 Optional argument:
-- `--processed-acquisitions-file path to a text file that will be updated with processed acquisition names. If --processed-acquisitions-file is provided, the command searches for folders named *_UsedForMerge in the input directory and appends their corresponding raw acquisition names (YYYYMMDD-HHMMSS) to the file. This can be useful to keep track of acquisitions already exported and avoid reprocessing them in future runs.
+- `--processed-acquisitions-file` path to a text file that will be updated with processed acquisition names. If --processed-acquisitions-file is provided, the command searches for folders named *_UsedForMerge in the input directory and appends their corresponding raw acquisition names (YYYYMMDD-HHMMSS) to the file. This can be useful to keep track of acquisitions already exported and avoid reprocessing them in future runs.
 
 #### Project mode:
 
@@ -399,7 +407,7 @@ uvptoolbox export-results -p /path/to/project
 In project mode:
 - the input directory defaults to `<project>/work/by_acquisition`,
 - the output directory defaults to `<project>/processed`,
-- the processed acquisitions file defaults to `<project>/logs/processed_acquisitions.txt.
+- the processed acquisitions file defaults to `<project>/logs/processed_acquisitions.txt`.
 
 #### Notes
 The command preserves the relative tree structure of the input directory.

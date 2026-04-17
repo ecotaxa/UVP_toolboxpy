@@ -4,12 +4,13 @@ from concurrent.futures import ThreadPoolExecutor
 from uvptoolbox.utils import setup_logger, find_acquisition_folders, copy_acquisition_folder
 
 
-def run(ctx, input_dir: Path, output_dir: Path, threads: int):
+def run(ctx, input_dir: Path, output_dir: Path):
     """Copy acquisition folders named YYYYMMDD-HHMMSS from an input directory to an output directory.
     Only new acquisitions are copied unless --overwrite is specified."""
     logger = setup_logger("uvptoolbox.load_new_data", debug=ctx.obj.get("debug", False))
 
     overwrite = ctx.obj.get("overwrite", False)
+    threads = ctx.obj.get("threads", 1)
 
     logger.info("Starting load-new-data")
     logger.info("Input directory: %s", input_dir)

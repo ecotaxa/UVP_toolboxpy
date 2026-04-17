@@ -14,8 +14,7 @@ def append_processed_acquisitions(processed_file: Path, acquisition_names: set[s
 def run(ctx,
         input_dir: Path,
         output_dir: Path,
-        processed_acquisitions_file: Path = None,
-        threads: int = 1):
+        processed_acquisitions_file: Path = None):
     """Export processed data (merged acquisition folders)."""
 
     logger = setup_logger("uvptoolbox.export_results", debug=ctx.obj.get("debug", False))
@@ -23,7 +22,9 @@ def run(ctx,
     # Make sure we have access to input data
     if not input_dir.exists():
         raise click.ClickException(f"Input directory does not exist: {input_dir}")
+
     overwrite = ctx.obj.get("overwrite", False)
+    threads = ctx.obj.get("threads", 1)
 
     logger.info("Starting export-results")
     logger.info("Input directory: %s", input_dir)

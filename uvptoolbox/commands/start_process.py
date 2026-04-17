@@ -33,8 +33,7 @@ def run(ctx,
         output_dir : Path,
         reset_work_dir : bool =False,
         skip_some_acquisitions: bool = True,
-        acquisitions_to_skip_file: Path = None,
-        threads: int = 1):
+        acquisitions_to_skip_file: Path = None):
     
     """Prepare work/all and copy selected acquisition folders into it."""
 
@@ -56,6 +55,7 @@ def run(ctx,
     work_dir = output_dir / "work"
     work_all_dir = work_dir / "all"
     overwrite = ctx.obj.get("overwrite", False)
+    threads = ctx.obj.get("threads", 1)
 
     logger.info("Starting start-process")
     logger.info("Raw input directory: %s", input_dir)
@@ -104,5 +104,4 @@ def run(ctx,
     )
 
     logger.info("Finished start-process")
-
 

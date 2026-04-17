@@ -16,12 +16,15 @@ class NaturalOrderGroup(click.Group):
 @click.group(cls=NaturalOrderGroup)
 @click.option("--debug", is_flag=True, default=False, help="Show debugging messages.")
 @click.option("--overwrite", is_flag=True, default=False, help="Overwrite existing outputs.")
+@click.option("--threads", "-T", type=click.IntRange(1, None), default=1,
+              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def cli(ctx, debug, overwrite):
+def cli(ctx, debug, overwrite, threads):
     """UVPtoolbox command line interface."""
     ctx.ensure_object(dict)
     ctx.obj["debug"] = debug
     ctx.obj["overwrite"] = overwrite
+    ctx.obj["threads"] = threads
 
 
 @cli.command(name="load-new-data")
@@ -31,10 +34,8 @@ def cli(ctx, debug, overwrite):
               help="Folder where new acquisition folders will be copied.")
 @click.option("--project","-p", type=click.Path(exists=True, path_type=Path),default=None,
               help="Project directory for project mode. If output-dir is not provided, it is set to <project>/raw.")
-@click.option("--threads","-T", type=click.IntRange(1, None),default=1,
-              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def load_new_data_cmd(ctx, input_dir, output_dir, project, threads):
+def load_new_data_cmd(ctx, input_dir, output_dir, project):
     """Copy acquisition folders named YYYYMMDD-HHMMSS from an input directory to an output directory. 
     Only new acquisitions are copied unless --overwrite is specified."""
     from uvptoolbox.commands import load_new_data
@@ -43,7 +44,7 @@ def load_new_data_cmd(ctx, input_dir, output_dir, project, threads):
             output_dir = project / "raw"
         else:
             raise click.UsageError("You must provide either --project or --output-dir.")
-    load_new_data.run(ctx, input_dir=input_dir, output_dir=output_dir, threads=threads)
+    load_new_data.run(ctx, input_dir=input_dir, output_dir=output_dir)
 
 
 @cli.command(name="start-process")
@@ -60,10 +61,8 @@ def load_new_data_cmd(ctx, input_dir, output_dir, project, threads):
 @click.option("--project","-p", type=click.Path(exists=True, path_type=Path),default=None,
               help="Project directory for project mode. If not provided explicitly: "
                    "--input-dir is set to <project>/raw, --output-dir is set to <project>, --acquisitions-to-skip-file is set to <project>/logs/processed_acquisitions.txt")
-@click.option("--threads","-T", type=click.IntRange(1, None),default=1,
-              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def start_process_cmd(ctx, input_dir, output_dir, reset_work_dir, skip_processed, acquisitions_to_skip_file, project, threads):
+def start_process_cmd(ctx, input_dir, output_dir, reset_work_dir, skip_processed, acquisitions_to_skip_file, project):
     """Prepare a work directory and copy unprocessed raw data into work/all."""
     from uvptoolbox.commands import start_process
     
@@ -83,8 +82,7 @@ def start_process_cmd(ctx, input_dir, output_dir, reset_work_dir, skip_processed
         acquisitions_to_skip_file = project / "logs/processed_acquisitions.txt"
     
     start_process.run(ctx, input_dir=input_dir, output_dir=output_dir, reset_work_dir=reset_work_dir,
-                      skip_some_acquisitions=skip_processed, acquisitions_to_skip_file=acquisitions_to_skip_file,
-                      threads=threads)
+                      skip_some_acquisitions=skip_processed, acquisitions_to_skip_file=acquisitions_to_skip_file)
 
 
 
@@ -93,10 +91,8 @@ def start_process_cmd(ctx, input_dir, output_dir, reset_work_dir, skip_processed
               help="Directory containing UVP data files to convert in place.")
 @click.option("--project","-p", type=click.Path(exists=True, path_type=Path),default=None,
               help="Project directory for project mode. If --data-dir is not provided, it is set to <project>/work/all.")
-@click.option("--threads","-T", type=click.IntRange(1, None),default=1,
-              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def convert_format_cmd(ctx, data_dir, project, threads):
+def convert_format_cmd(ctx, data_dir, project):
     """Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. Conversion is done in place."""
     from uvptoolbox.commands import convert_format
     
@@ -106,7 +102,7 @@ def convert_format_cmd(ctx, data_dir, project, threads):
         else:
             raise click.UsageError("You must provide either --project or --data-dir.")
 
-    convert_format.run( ctx, data_dir=data_dir, threads=threads)
+    convert_format.run( ctx, data_dir=data_dir)
 
 
 @cli.command(name="acquisition-info")
@@ -146,10 +142,8 @@ def acquisition_info_cmd(ctx, input_dir, project):
 @click.option("--project", "-p", type=click.Path(exists=True, path_type=Path),default=None,
               help="Project directory for project mode. If not provided explicitly: "
                    "--input-dir is set to <project>/work/all, --output-dir is set to <project>/work/by_acquisition, --config-file is set to <project>/config/acquisition_configs.csv")
-@click.option("--threads","-T", type=click.IntRange(1, None),default=1,
-              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def acquisition_split_cmd(ctx, input_dir, output_dir, config_file, project, threads):
+def acquisition_split_cmd(ctx, input_dir, output_dir, config_file, project):
     """Split UVP acquisitions folders into one folder per acquisition configuration."""
     from uvptoolbox.commands import acquisition_split
     
@@ -168,7 +162,7 @@ def acquisition_split_cmd(ctx, input_dir, output_dir, config_file, project, thre
     if config_file is None and project is not None :
         config_file = project / "config" / "acquisition_configs.csv"
     
-    acquisition_split.run(ctx, input_dir=input_dir, output_dir=output_dir, config_file=config_file, threads=threads)
+    acquisition_split.run(ctx, input_dir=input_dir, output_dir=output_dir, config_file=config_file)
 
 
 @cli.command(name="time-info")
@@ -209,10 +203,8 @@ def time_info_cmd(ctx, data_dir, project):
                    "If not provided, the earliest datetime found in the data is used.")
 @click.option("--project","-p", type=click.Path(exists=True, path_type=Path),default=None,
               help="Project directory for project mode. If data-dir is not provided explicitly, all folders in <project>/work/by_acquisition will be processed.")
-@click.option("--threads","-T", type=click.IntRange(1, None),default=1,
-              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project, threads):
+def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project):
     """Merge acquisitions by time step or by day, and copy corresponding vignettes."""
     from uvptoolbox.commands import time_merge
 
@@ -232,7 +224,7 @@ def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project, th
     if time_step is None:
         by_day = True
 
-    time_merge.run(ctx, data_dirs=data_dirs, by_day=by_day, time_step=time_step, start_datetime=start_datetime, threads=threads)
+    time_merge.run(ctx, data_dirs=data_dirs, by_day=by_day, time_step=time_step, start_datetime=start_datetime)
 
 
 
@@ -298,10 +290,8 @@ def create_meta_cmd(ctx,data_dir,config_dir,output_dir,latitude,longitude,consta
                    "--input-dir is set to <project>/work/by_acquisition, "
                    "--output-dir is set to <project>/processed, "
                    "--processed-acquisitions-file is set to <project>/logs/processed_acquisitions.txt.")
-@click.option("--threads","-T", type=click.IntRange(1, None),default=1,
-              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, project, threads):
+def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, project):
     """Export merged acquisition folders to a destination directory."""
     from uvptoolbox.commands import export_results
 
@@ -320,7 +310,7 @@ def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, 
     if processed_acquisitions_file is None and project is not None:
         processed_acquisitions_file = project / "logs" / "processed_acquisitions.txt"
 
-    export_results.run(ctx, input_dir=input_dir, output_dir=output_dir, processed_acquisitions_file=processed_acquisitions_file, threads=threads)
+    export_results.run(ctx, input_dir=input_dir, output_dir=output_dir, processed_acquisitions_file=processed_acquisitions_file)
 
 
 @cli.command(name="run-default-pipeline")
@@ -334,10 +324,8 @@ def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, 
               help="Time step in hours used to merge the data.")
 @click.option("--start-datetime", "-s", default=None,
               help="Optional start datetime in format YYYYMMDD-HHMMSS.")
-@click.option("--threads","-T", type=click.IntRange(1, None),default=1,
-              help="Number of parallel threads to use. Default: 1.")
 @click.pass_context
-def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_datetime, threads):
+def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_datetime):
     """Run the default UVP processing pipeline in project mode."""
 
     from uvptoolbox.commands import (load_new_data,start_process,convert_format,acquisition_split,time_merge,create_meta,export_results)
@@ -348,7 +336,7 @@ def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_d
         by_day = False
 
     click.echo("\n---- Running load-new-data ----")
-    load_new_data.run(ctx, input_dir=input_dir, output_dir=project / "raw", threads=threads)
+    load_new_data.run(ctx, input_dir=input_dir, output_dir=project / "raw")
 
     click.echo("\n---- Running start-process ----")
     start_process.run(
@@ -357,19 +345,17 @@ def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_d
         output_dir=project,
         reset_work_dir=True,
         skip_some_acquisitions=True,
-        acquisitions_to_skip_file=project / "logs" / "processed_acquisitions.txt",
-        threads=threads)
+        acquisitions_to_skip_file=project / "logs" / "processed_acquisitions.txt")
 
     click.echo("\n---- Running convert-format ----")
-    convert_format.run(ctx, data_dir=project / "work" / "all", threads=threads)
+    convert_format.run(ctx, data_dir=project / "work" / "all")
 
     click.echo("\n---- Running acquisition-split ----")
     acquisition_split.run(
         ctx,
         input_dir=project / "work" / "all",
         output_dir=project / "work" / "by_acquisition",
-        config_file=project / "config" / "acquisition_configs.csv",
-        threads=threads)
+        config_file=project / "config" / "acquisition_configs.csv")
 
     data_dirs = [p for p in (project / "work" / "by_acquisition").iterdir() if p.is_dir()]
 
@@ -379,8 +365,7 @@ def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_d
         data_dirs=data_dirs,
         by_day=by_day,
         time_step=time_step,
-        start_datetime=start_datetime,
-        threads=threads)
+        start_datetime=start_datetime)
 
     click.echo("\n---- Running create-meta ----")
     create_meta.run(
@@ -394,8 +379,7 @@ def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_d
         ctx,
         input_dir=project / "work" / "by_acquisition",
         output_dir=project / "processed",
-        processed_acquisitions_file=project / "logs" / "processed_acquisitions.txt",
-        threads=threads)
+        processed_acquisitions_file=project / "logs" / "processed_acquisitions.txt")
 
     click.echo("\nDefault pipeline completed.")
 

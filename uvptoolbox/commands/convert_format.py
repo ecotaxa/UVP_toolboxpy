@@ -95,11 +95,12 @@ def standardize_uvp_data_format(file_path: Path, logger):
         return "failed"
 
 
-def run(ctx, data_dir: Path, threads: int = 1):
+def run(ctx, data_dir: Path):
     """Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. Conversion is done in place."""
     logger = setup_logger("uvptoolbox.convert_format", debug=ctx.obj.get("debug", False))
     
     overwrite = ctx.obj.get("overwrite", False)
+    threads = ctx.obj.get("threads", 1)
 
     logger.info("Starting convert-format")
     logger.info("Working on files in: %s", data_dir)
@@ -146,6 +147,5 @@ def run(ctx, data_dir: Path, threads: int = 1):
         counters["reconverted"],
         counters["failed"],
     )
-
 
 

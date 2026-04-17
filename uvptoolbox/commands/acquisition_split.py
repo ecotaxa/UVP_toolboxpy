@@ -135,14 +135,14 @@ def write_detected_acquisition_configs(unique_configs : pd.DataFrame, config_fil
 def run(ctx,
         input_dir: Path,
         output_dir: Path,
-        config_file: Path = None,
-        threads: int = 1):
+        config_file: Path = None):
     """Split UVP acquisitions folders into one folder per acquisition configuration."""
     
     logger = setup_logger("uvptoolbox.acquisition_split", debug=ctx.obj.get("debug", False))
     
     
     overwrite = ctx.obj.get("overwrite", False)
+    threads = ctx.obj.get("threads", 1)
 
     logger.info("Starting acquisition-split")
     logger.info("Input data folder: %s", input_dir)
