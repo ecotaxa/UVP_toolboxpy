@@ -44,7 +44,7 @@ def rename_folder_and_files_UsedForMerge(acq_dir: Path, logger: logging.Logger, 
     return status,renamed_files
 
 def concatenate_data_files(data_files: list[Path], logger: logging.Logger):
-    """Concatenate multiple UVP data files into header lines and data lines."""
+    """Concatenate multiple UVP data files into header lines and data records (tuples with a data line and its source acquisition sequence identifier)."""
     if not data_files:
         return [], []
 
@@ -71,21 +71,22 @@ def concatenate_data_files(data_files: list[Path], logger: logging.Logger):
     header_lines = [hw_line, "", acq_line, ""]
 
     # Extract data lines from all files
-    data_lines = []
+    data_records = []
     for file_path in data_files:
+        source_acquisition_id = file_path.stem.removesuffix("_UsedForMerge_data")
         with open(file_path, "r") as f:
             lines = f.read().splitlines()
-            data_lines.extend(line for line in lines if line and not (line.startswith("HW") or line.startswith("ACQ")))
+            for line in lines:
+                if line and not (line.startswith("HW") or line.startswith("ACQ")):
+                    data_records.append((line, source_acquisition_id))
 
-    return header_lines, data_lines
+    return header_lines, data_records
 
-def get_min_datetime_from_data_lines(data_lines: list[str]):
-    """Return the earliest datetime found in UVP data lines as YYYYMMDD-HHMMSS."""
+def get_min_datetime_from_data_records(data_records: list[tuple[str, str]]):
+    """Return the earliest datetime found in UVP data records as YYYYMMDD-HHMMSS."""
     datetimes = []
 
-    for line in data_lines:
-        if not line:
-            continue
+    for line, _source in data_records:
         date_time_str = line.split(",", 1)[0]
         try:
             dt = datetime.strptime(date_time_str, "%Y%m%d-%H%M%S")
@@ -103,17 +104,15 @@ def get_min_datetime_from_data_lines(data_lines: list[str]):
 
 
 
-def split_data(header_lines: list[str], data_lines: list[str], time_step: float, start_datetime: str):
+def split_data(header_lines: list[str], data_records: list[tuple[str, str]], time_step: float, start_datetime: str):
     """Split concatenated data (output from concatenate_data_files function) using a start datetime and a time step in hours."""
     
     # Initialize a dictionary to store data for each time step
-    time_steps_data = defaultdict(lambda: header_lines.copy())
+    split_dict = defaultdict(lambda: {"lines": header_lines.copy(), "sources": set()})
     start_datetime = datetime.strptime(start_datetime, '%Y%m%d-%H%M%S')
     time_step = float(time_step)
 
-    for line in data_lines:
-        if not line:
-            continue
+    for line, source in data_records:
         # Extract the date and time from the line
         date_time_str = line.split(',', 1)[0]
         try:
@@ -133,9 +132,10 @@ def split_data(header_lines: list[str], data_lines: list[str], time_step: float,
         # Determine the time step index
         time_step_index = int(time_difference / time_step)
         # Append the data to the corresponding time step in the dictionary
-        time_steps_data[time_step_index].append(line)
+        split_dict[time_step_index]["lines"].append(line)
+        split_dict[time_step_index]["sources"].add(source)
 
-    return dict(time_steps_data)
+    return dict(split_dict)
 
 
 def write_splitted_data(splitted_data: dict, output_folder: Path, time_step: float, start_datetime: str, logger: logging.Logger, overwrite: bool):
@@ -146,22 +146,27 @@ def write_splitted_data(splitted_data: dict, output_folder: Path, time_step: flo
     start_datetime = datetime.strptime(start_datetime, '%Y%m%d-%H%M%S')
 
     merged_files = []
-    
-    for time_step_index, data_list in splitted_data.items():
+
+    for time_step_index, bin_data in splitted_data.items():
+        lines = bin_data["lines"]
+        n_sources = len(bin_data["sources"])
+        
         # Get the datetime of the first data in the time step
         time_step_datetime = start_datetime + timedelta(hours=time_step_index * step_float)
         datetime_str = time_step_datetime.strftime("%Y%m%d-%H%M%S")
 
-        merged_folder = output_folder / f"{datetime_str}_Merged"
+        suffix = f"_Merged-{n_sources:03d}"
+
+        merged_folder = output_folder / f"{datetime_str}{suffix}"
         merged_folder.mkdir(parents=True, exist_ok=True)
 
-        output_file = merged_folder / f"{datetime_str}_Merged_data.txt"
+        output_file = merged_folder / f"{datetime_str}{suffix}_data.txt"
 
         if output_file.exists() and not overwrite:
             logger.info("Merged file already exists, skipped: %s", output_file.name)
         else:
             with open(output_file, "w") as f:
-                for value in data_list:
+                for value in lines:
                     f.write(f"{value}\n")
             logger.info("Merged file written: %s", output_file.name)
 
@@ -170,12 +175,12 @@ def write_splitted_data(splitted_data: dict, output_folder: Path, time_step: flo
     return merged_files
                     
         
-def split_data_by_day(data_lines : list[str], header_lines : list[str], start_datetime: str):
+def split_data_by_day(data_records: list[tuple[str, str]], header_lines : list[str], start_datetime: str):
     """Split UVP data lines by day."""
-    split_data = defaultdict(lambda: header_lines.copy())
+    split_dict = defaultdict(lambda: {"lines": header_lines.copy(), "sources": set()})
     start_datetime = datetime.strptime(start_datetime, '%Y%m%d-%H%M%S')
 
-    for line in data_lines:
+    for line, source in data_records:
         # Extract the date and time from the line
         date_time_str = line.split(',', 1)[0]
         try:
@@ -187,25 +192,30 @@ def split_data_by_day(data_lines : list[str], header_lines : list[str], start_da
         if date_time < start_datetime:
             continue
 
-        date_str = line.split(",", 1)[0][:8]  # YYYYMMDD
-        split_data[date_str].append(line)
+        date_str = date_time_str[:8]  # YYYYMMDD
+        split_dict[date_str]["lines"].append(line)
+        split_dict[date_str]["sources"].add(source)
 
-    return dict(split_data)
+    return dict(split_dict)
 
 def write_split_by_day_data(split_data : dict, data_dir : Path , logger: logging.Logger, overwrite : bool):
     """Create one merged data folder per day. Write the appropriate data file and copy associated vignettes in a subfolder named "1"."""
 
     merged_files = []
-    
-    for date_str, lines in split_data.items():
+
+    for date_str, bin_data in split_data.items():
+        lines = bin_data["lines"]
+        n_sources = len(bin_data["sources"])
+
         datetime_str = date_str + "-000000"
+        suffix = f"_Merged-{n_sources:03d}"
 
         # Create daily folder
-        merged_folder = data_dir / f"{datetime_str}_Merged"
+        merged_folder = data_dir / f"{datetime_str}{suffix}"
         merged_folder.mkdir(parents=True, exist_ok=True)
 
         # Write daily file
-        output_file = merged_folder / f"{datetime_str}_Merged_data.txt"
+        output_file = merged_folder / f"{datetime_str}{suffix}_data.txt"
         if overwrite or not output_file.exists():
             with open(output_file, 'w') as file:
                 for value in lines:
@@ -328,23 +338,23 @@ def run(ctx,
             continue
         logger.info("Number of acquisition data files named *_UsedForMerge_data.txt found: %s", len(data_files))
         
-        header_lines, data_lines = concatenate_data_files(data_files, logger=logger)
-        if not header_lines or not data_lines:
+        header_lines, data_records = concatenate_data_files(data_files, logger=logger)
+        if not header_lines or not data_records:
             logger.warning("No mergeable data found in %s, skipping.", data_dir)
             continue
 
         current_start_datetime = start_datetime # don't modify start_datetime of other directories to be treated
         if current_start_datetime is None:
-            current_start_datetime = get_min_datetime_from_data_lines(data_lines)
+            current_start_datetime = get_min_datetime_from_data_records(data_records)
         logger.info("Stating at date : %s", current_start_datetime)
 
 
         if by_day:
-            split_dict = split_data_by_day(data_lines, header_lines,current_start_datetime)
+            split_dict = split_data_by_day(data_records, header_lines,current_start_datetime)
             merged_files = write_split_by_day_data(split_dict, data_dir, logger=logger,overwrite=overwrite)
 
         else:
-            split_dict = split_data(header_lines, data_lines, time_step, current_start_datetime)
+            split_dict = split_data(header_lines, data_records, time_step, current_start_datetime)
             merged_files = write_splitted_data(split_dict, data_dir, time_step, current_start_datetime, logger=logger,overwrite=overwrite)
         
         vig_list = [vig for vig in data_dir.rglob("*.vig") if "_Merged" not in str(vig)]
