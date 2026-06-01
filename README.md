@@ -10,7 +10,7 @@ Following a long acquisition with the UVP6, you may need to create samples group
 - splitting acquisitions by acquisition configuration,
 - merging acquisitions by time step or by day, with associated vignette copying,
 - creating the metadata dataframe associated with the processed data,
-- exporting processed merged results to a final directory.
+- exporting processed merged results together with the corresponding `UsedForMerge` folders to a final directory.
 
 
 ## Installation
@@ -85,7 +85,7 @@ my_project/
         acquisition_configs.csv         optional acquisition split configuration file
         cruise_info.txt                 optional file containing general mooring informations
         HW_[...].txt                    optional file containing hardware acquisition configuration parameters
-        meta_constants.txt              optional file containing constant metadata fields (see seciion create-meta)
+        meta_constants.txt              optional file containing constant metadata fields (see section create-meta)
     logs/                               optional log and bookkeeping files
     meta/                               metadata outputs 
 ```
@@ -116,7 +116,7 @@ uvptoolbox time-merge -p /path/to/project --by-day
 # Create or update metadata file(s) in `<project>/meta` from merged UVP data files and project configuration files.
 uvptoolbox create-meta -p /path/to/project 
 
-# Export processed data to `<project>/processed`
+# Export processed merged data together with the corresponding `_UsedForMerge` folders to `<project>/processed`
 uvptoolbox export-results -p /path/to/project
 ```
 
@@ -209,7 +209,7 @@ uvptoolbox acquisition-info -i /path/to/data_dir
 ```
 uvptoolbox acquisition-info -p /path/to/project
 ```
-In project mode the input directory defaults to `<project>/work/all.
+In project mode the input directory defaults to `<project>/work/all`.
 
 ### acquisition-split
 Split UVP acquisitions folders into one folder per acquisition configuration.
@@ -276,8 +276,11 @@ In project mode all folders inside `<project>/work/by_acquisition` are inspected
 
 ### time-merge
 Merge acquisitions by time step or by day, and copy corresponding vignettes.
-This step creates in the provided data folder merged folders such as `YYYYMMDD-HHMMSS_Merged/` containing:
-- a `merged *_Merged_data.txt` file,
+This step creates in the provided data folder merged folders such as `YYYYMMDD-HHMMSS_Merged-XXX/`, where `XXX` correspond to the number of acquisition sequences that were concatenated into this merged output. 
+For example `20250709-000000_Merged-012/` means that 12 acquisition sequences were concatenated to create the acquisition 20250709-000000_Merged.
+
+Each merged folder contains:
+- a `*_Merged-XXX_data.txt` file,
 - a `1/` directory with copied vignettes.
 
 #### Standalone mode:
@@ -380,10 +383,13 @@ Metadata files are written in the output directory with names of the form: `<cru
 - If no acquisition lines are found in a merged file, the file is still processed with endimg = 0.
 
 ### export-results
-Export processed data by copying merged acquisition folders to a destination directory.
+Export processed data by copying merged acquisition folders and corresponding `UsedForMerge` folders to a destination directory.
 
-This step searches recursively for folders named `*_Merged` in the input directory and copies them to the output directory while preserving their relative tree structure.  
-Folders named `*_UsedForMerge` are not exported.
+This step searches recursively in the input directory for:
+- merged folders whose names contain `_Merged` (for example `20250709-000000_Merged-012`)
+- acquisition folders named `*_UsedForMerge`
+
+and copies them to the output directory while preserving their relative tree structure.
 
 Optionally, the command can also update a text file listing the raw acquisition folders that have already been processed and exported.
 
@@ -414,16 +420,17 @@ The command preserves the relative tree structure of the input directory.
 
 For example, if the input directory contains:
 ```
-work/by_acquisition/
+processed/
     OBSEA_Off/
-        20250709-000000_Merged/
+        20250709-000000_Merged-002/
         20250709-000000_UsedForMerge/
         20250709-010000_UsedForMerge/
-        20250710-000000_Merged/
+        20250710-000000_Merged-002/
         20250710-000000_UsedForMerge/
         20250710-010000_UsedForMerge/
+        someting_else/
     OBSEA_On/
-        20250709-000000_Merged/
+        20250709-000000_Merged-005/
         ...
 ```
 
@@ -431,10 +438,14 @@ the exported output directory will contain:
 ```
 processed/
     OBSEA_Off/
-        20250709-000000_Merged/
-        20250710-000000_Merged/
+        20250709-000000_Merged-002/
+        20250709-000000_UsedForMerge/
+        20250709-010000_UsedForMerge/
+        20250710-000000_Merged-002/
+        20250710-000000_UsedForMerge/
+        20250710-010000_UsedForMerge/
     OBSEA_On/
-        20250709-000000_Merged/
+        20250709-000000_Merged-005/
         ...
 ```
 

@@ -33,17 +33,18 @@ def run(ctx,
     if threads > 1:
         logger.info("Parallel threads: %d", threads)
 
-    merged_folders = [p for p in input_dir.rglob("*_Merged") if p.is_dir()]
-    if not merged_folders:
-        logger.warning("No merged acquisition data found in %s", input_dir)
+    export_folders = [p for p in input_dir.rglob("*") if p.is_dir() and ("_Merged" in p.name or p.name.endswith("_UsedForMerge"))]
+
+    if not export_folders:
+        logger.warning("No merged or UsedForMerge acquisition folders found in %s", input_dir)
         return 
-    logger.info("Number of found merged acquisition folders: %d", len(merged_folders))
+    logger.info("Number of folders to export: %d", len(export_folders))
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     counters = {"copied": 0, "skipped": 0, "replaced": 0}
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        results = executor.map(lambda folder: copy_acquisition_folder(folder, output_dir / folder.relative_to(input_dir), logger=logger, overwrite=overwrite), merged_folders)
+        results = executor.map(lambda folder: copy_acquisition_folder(folder, output_dir / folder.relative_to(input_dir), logger=logger, overwrite=overwrite), export_folders)
         for result in results:
             counters[result] += 1
 
