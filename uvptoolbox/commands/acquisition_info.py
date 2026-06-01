@@ -4,7 +4,7 @@ import click
 from uvptoolbox.utils import setup_logger
 from uvptoolbox.commands.acquisition_split import extract_acquisition_parameters, detect_unique_acquisition_configs
 
-
+## prout prout
 def run(ctx,
         input_dir: Path):
     """Inspect acquisitions folders acquisition configuration."""
