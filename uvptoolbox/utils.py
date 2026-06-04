@@ -33,22 +33,62 @@ def find_acquisition_folders(source_root: Path) -> list[Path]:
     return sorted(acquisition_folders)
 
 
-def copy_acquisition_folder(src: Path, dest: Path, logger: logging.Logger, overwrite: bool = False ) -> str:
-    """Copy one acquisition folder src to dest. Returns: 'copied', 'skipped', or 'replaced' """
+# def copy_acquisition_folder(src: Path, dest: Path, logger: logging.Logger, overwrite: bool = False ) -> str:
+#     """Copy one acquisition folder src to dest. Returns: 'copied', 'skipped', or 'replaced' """
+
+#     if dest.exists():
+
+#         if overwrite :
+#             shutil.rmtree(dest)
+#             shutil.copytree(src, dest,
+#             copy_function=shutil.copyfile,
+#             ignore_dangling_symlinks=True
+#         )
+#             logger.debug("Replaced acquisition: %s", dest.name)
+#             return "replaced"
+
+#         else:
+#             logger.debug("Skipped existing acquisition: %s", dest.name)
+#             return "skipped"
+
+#     shutil.copytree(src, dest,
+#             copy_function=shutil.copyfile,
+#             ignore_dangling_symlinks=True
+#         )
+#     logger.debug("Copied acquisition: %s", dest.name)
+#     return "copied"
+
+def copytree_content_only(src: Path, dest: Path):
+    src = Path(src)
+    dest = Path(dest)
+
+    dest.mkdir(parents=True, exist_ok=True)
+
+    for item in src.iterdir():
+        target = dest / item.name
+
+        if item.is_dir():
+            copytree_content_only(item, target)
+
+        elif item.is_file():
+            shutil.copyfile(item, target)
+
+
+def copy_acquisition_folder(src, dest, logger, overwrite=False):
+    src = Path(src)
+    dest = Path(dest)
 
     if dest.exists():
-
-        if overwrite :
+        if overwrite:
             shutil.rmtree(dest)
-            shutil.copytree(src, dest)
+            copytree_content_only(src, dest)
             logger.debug("Replaced acquisition: %s", dest.name)
             return "replaced"
 
-        else:
-            logger.debug("Skipped existing acquisition: %s", dest.name)
-            return "skipped"
+        logger.debug("Skipped existing acquisition: %s", dest.name)
+        return "skipped"
 
-    shutil.copytree(src, dest)
+    copytree_content_only(src, dest)
     logger.debug("Copied acquisition: %s", dest.name)
     return "copied"
 
