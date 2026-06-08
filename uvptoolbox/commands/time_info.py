@@ -38,13 +38,13 @@ def run(ctx,
         )
 
 
-        header_lines, data_lines = concatenate_data_files(data_files, logger=logger)
-        if not header_lines or not data_lines:
+        header_lines, data_records = concatenate_data_files(data_files, logger=logger)
+        if not header_lines or not data_records:
             click.echo(f"No data found in any files of {data_dir}, skipping.")
             continue
 
         datetimes = []
-        for line in data_lines:
+        for line, _source in data_records:
             if not line:
                 continue
             date_time_str = line.split(",", 1)[0]
