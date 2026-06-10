@@ -108,6 +108,7 @@ def extract_variable_meta_from_merged_file(merged_file: Path, cruise_value: str,
         lines = [line.strip() for line in f if line.strip()]
 
     data_lines = [line for line in lines if not line.startswith(("HW", "ACQ"))]
+    HW_line =  [line for line in lines if  line.startswith("HW")][0]
     if not data_lines:
         # If no acquisition lines are found, keep processing the file with:
         # - endimg = 0
@@ -120,6 +121,8 @@ def extract_variable_meta_from_merged_file(merged_file: Path, cruise_value: str,
     return {
         "filename": file_stem.removesuffix("_data"),
         "profileid": profileid,
+        "firstimage":1,
+        "volimage": HW_line.split(",")[22],
         "endimg": len(data_lines),
         "sampledatetime": first_datetime[0] + "-" + first_datetime[1],
     }
