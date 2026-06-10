@@ -121,7 +121,7 @@ def extract_variable_meta_from_merged_file(merged_file: Path, cruise_value: str,
     return {
         "filename": file_stem.removesuffix("_data"),
         "profileid": profileid,
-        "firstimage":1,
+        "firstimage":0,
         "volimage": HW_line.split(",")[22],
         "endimg": len(data_lines),
         "sampledatetime": first_datetime[0] + "-" + first_datetime[1],
