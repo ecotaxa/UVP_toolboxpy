@@ -92,6 +92,40 @@ def copy_acquisition_folder(src, dest, logger, overwrite=False):
     logger.debug("Copied acquisition: %s", dest.name)
     return "copied"
 
+# new fonction to copy acquisition folder from downloaded to currently_processed
+def copy_acquisition_folder_to_processed(src, dest_dir, acquisition_name, logger, overwrite=False):
+    src = Path(src)
+    dest_dir = Path(dest_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    status = "copied"
+    any_skipped = False
+    any_replaced = False
+
+    for file in src.rglob("*"):
+        if not file.is_file():
+            continue
+
+        dest_path = dest_dir / f"{file.stem}_{acquisition_name}{file.suffix}"
+
+        if dest_path.exists():
+            if overwrite:
+                shutil.copyfile(file, dest_path)
+                any_replaced = True
+                logger.debug("Replaced file: %s", dest_path.name)
+            else:
+                any_skipped = True
+                logger.debug("Skipped existing file: %s", dest_path.name)
+            continue
+
+        shutil.copyfile(file, dest_path)
+        logger.debug("Copied file: %s", dest_path.name)
+
+    if any_replaced:
+        return "replaced"
+    if any_skipped and status == "copied":
+        return "skipped"
+    return status
 
 def append_processed_acquisitions(processed_file: Path, acquisition_names: list[str]) -> None:
     """Append newly processed acquisition names to the processed acquisitions file."""

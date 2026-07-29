@@ -52,7 +52,8 @@ def run(ctx,
             logger.warning("File containing the names of acquisitions to skip not found: %s", acquisitions_to_skip_file)
             logger.warning("All acquisitions will be processed.")
 
-    work_dir = output_dir / "work"
+    # work_dir = output_dir / "work"
+    work_dir = output_dir / "raw"
     work_all_dir = work_dir / "all"
     overwrite = ctx.obj.get("overwrite", False)
     threads = ctx.obj.get("threads", 1)

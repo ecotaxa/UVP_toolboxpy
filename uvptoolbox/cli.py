@@ -41,10 +41,35 @@ def load_new_data_cmd(ctx, input_dir, output_dir, project):
     from uvptoolbox.commands import load_new_data
     if output_dir is None:
         if  project is not None :
-            output_dir = project / "raw"
+            # output_dir = project / "raw"
+            output_dir = project / "downloaded"
         else:
             raise click.UsageError("You must provide either --project or --output-dir.")
     load_new_data.run(ctx, input_dir=input_dir, output_dir=output_dir)
+
+
+## command specific for Aneris project
+@cli.command(name="load-new-data-aneris")
+@click.option("--input-dir", "-i", type=click.Path(exists=True, path_type=Path), required=True,
+              help="Input folder containing acquisition folders and/or ZIP files to load.")
+@click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=None,
+              help="Folder where new acquisition folders will be copied.")
+@click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
+              help="Project directory for project mode. If output-dir is not provided, it is set to <project>/raw.")
+@click.pass_context
+def load_new_data_aneris_cmd(ctx, input_dir, output_dir, project):
+    """Copy acquisition folders from directories and ZIP files, extracting ZIP files one by one."""
+    from uvptoolbox.commands import load_new_data_aneris
+
+    if output_dir is None:
+        if project is not None:
+            # output_dir = project / "raw"
+            output_dir = project / "downloaded"
+        else:
+            raise click.UsageError("You must provide either --project or --output-dir.")
+
+    load_new_data_aneris.run(ctx, input_dir=input_dir, output_dir=output_dir)
+
 
 
 @cli.command(name="start-process")
@@ -68,7 +93,9 @@ def start_process_cmd(ctx, input_dir, output_dir, reset_work_dir, skip_processed
     
     if input_dir is None:
         if  project is not None :
-            input_dir = project / "raw"
+            # input_dir = project / "raw"
+            input_dir = project / "downloaded"
+
         else:
             raise click.UsageError("You must provide either --project or --input-dir.")
     
@@ -98,7 +125,8 @@ def convert_format_cmd(ctx, data_dir, project):
     
     if data_dir is None:
         if project is not None :
-            data_dir = project / "work" / "all"
+            # data_dir = project / "work" / "all"
+            data_dir = project / "currently_processed" / "all"
         else:
             raise click.UsageError("You must provide either --project or --data-dir.")
 
@@ -117,7 +145,8 @@ def acquisition_info_cmd(ctx, input_dir, project):
 
     if input_dir is None:
         if project is not None :
-            input_dir = project / "work" / "all"
+            # input_dir = project / "work" / "all"
+            input_dir = project / "currently_processed" / "all"
         else:
             raise click.UsageError("You must provide either --project or --input-dir.")
 
@@ -149,13 +178,15 @@ def acquisition_split_cmd(ctx, input_dir, output_dir, config_file, project):
     
     if input_dir is None:
         if project is not None :
-            input_dir = project / "work" / "all"
+            # input_dir = project / "work" / "all"
+            input_dir = project / "currently_processed" / "all"
         else:
             raise click.UsageError("You must provide either --project or --input-dir.")
     
     if output_dir is None:
         if project is not None :
-            output_dir = project / "work" / "by_acquisition"
+            # output_dir = project / "work" / "by_acquisition"
+            output_dir = project / "currently_processed" / "by_acquisition"
         else:
             raise click.UsageError("You must provide either --project or --output-dir.")
     
@@ -180,7 +211,8 @@ def time_info_cmd(ctx, data_dir, project):
         data_dirs = [data_dir]
     else:
         if project is not None:
-            base_dir = project / "work" / "by_acquisition"
+            # base_dir = project / "work" / "by_acquisition"
+            base_dir = project / "currently_processed" / "by_acquisition"
             if base_dir.exists():
                 data_dirs = [p for p in base_dir.iterdir() if p.is_dir()]
             if not base_dir.exists() or not data_dirs:
@@ -213,7 +245,8 @@ def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project):
         data_dirs = [data_dir]
     else:
         if project is not None :
-            base_dir = project / "work" / "by_acquisition"
+            # base_dir = project / "work" / "by_acquisition"
+            base_dir = project / "currently_processed" / "by_acquisition"
             if base_dir.exists():
                 data_dirs = [p for p in base_dir.iterdir() if p.is_dir()]
             if not base_dir.exists() or not data_dirs:
@@ -257,7 +290,8 @@ def create_meta_cmd(ctx,data_dir,config_dir,output_dir,latitude,longitude,consta
         data_dirs = [data_dir]
     else:
         if project is not None:
-            base_dir = project / "work" / "by_acquisition"
+            #  base_dir = project / "work" / "by_acquisition"
+            base_dir = project / "currently_processed" / "by_acquisition"
             if base_dir.exists():
                 data_dirs = [p for p in base_dir.iterdir() if p.is_dir()]
             if not base_dir.exists() or not data_dirs:
@@ -297,13 +331,15 @@ def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, 
 
     if input_dir is None:
         if project is not None:
-            input_dir = project / "work" / "by_acquisition"
+            # input_dir = project / "work" / "by_acquisition"
+            input_dir = project / "currently_processed" / "by_acquisition"
         else:
             raise click.UsageError("You must provide either --project or --input-dir.")
 
     if output_dir is None:
         if project is not None:
-            output_dir = project / "processed"
+            # output_dir = project / "processed"
+            output_dir = project / "raw"
         else:
             raise click.UsageError("You must provide either --project or --output-dir.")
 
@@ -336,28 +372,34 @@ def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_d
         by_day = False
 
     click.echo("\n---- Running load-new-data ----")
-    load_new_data.run(ctx, input_dir=input_dir, output_dir=project / "raw")
+    # load_new_data.run(ctx, input_dir=input_dir, output_dir=project / "raw")
+    load_new_data.run(ctx, input_dir=input_dir, output_dir=project / "downloaded")
 
     click.echo("\n---- Running start-process ----")
     start_process.run(
         ctx,
-        input_dir=project / "raw",
+        # input_dir=project / "raw",
+        input_dir=project / "downloaded",
         output_dir=project,
         reset_work_dir=True,
         skip_some_acquisitions=True,
         acquisitions_to_skip_file=project / "logs" / "processed_acquisitions.txt")
 
     click.echo("\n---- Running convert-format ----")
-    convert_format.run(ctx, data_dir=project / "work" / "all")
+    # convert_format.run(ctx, data_dir=project / "work" / "all")
+    convert_format.run(ctx, data_dir=project / "currently_processed" / "all")
 
     click.echo("\n---- Running acquisition-split ----")
     acquisition_split.run(
         ctx,
-        input_dir=project / "work" / "all",
-        output_dir=project / "work" / "by_acquisition",
+        # input_dir=project / "work" / "all",
+        input_dir=project / "currently_processed" / "all",
+        # output_dir=project / "work" / "by_acquisition",
+        output_dir=project / "currently_processed" / "by_acquisition",
         config_file=project / "config" / "acquisition_configs.csv")
 
-    data_dirs = [p for p in (project / "work" / "by_acquisition").iterdir() if p.is_dir()]
+    # data_dirs = [p for p in (project / "work" / "by_acquisition").iterdir() if p.is_dir()]
+    data_dirs = [p for p in (project / "currently_processed" / "by_acquisition").iterdir() if p.is_dir()]
 
     click.echo("\n---- Running time-merge ----")
     time_merge.run(
@@ -377,8 +419,10 @@ def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_d
     click.echo("\n---- Running export-results ----")
     export_results.run(
         ctx,
-        input_dir=project / "work" / "by_acquisition",
-        output_dir=project / "processed",
+        # input_dir=project / "work" / "by_acquisition",
+        input_dir=project / "currently_processed" / "by_acquisition",
+        # output_dir=project / "processed",
+        output_dir=project / "raw",
         processed_acquisitions_file=project / "logs" / "processed_acquisitions.txt")
 
     click.echo("\nDefault pipeline completed.")
