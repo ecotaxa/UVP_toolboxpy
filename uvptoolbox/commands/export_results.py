@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import click
 from concurrent.futures import ThreadPoolExecutor
@@ -11,6 +12,21 @@ def append_processed_acquisitions(processed_file: Path, acquisition_names: set[s
     with open(processed_file, "a") as f:
         for name in sorted(acquisition_names):
             f.write(f"{name}\n")
+
+
+def rename_data_file_to_match_folder(dest: Path, logger: logging.Logger) -> None:
+    """Rename the *_data.txt file directly under dest so its name matches dest's folder name."""
+    data_files = [f for f in dest.iterdir() if f.is_file() and f.name.endswith("_data.txt")]
+    if not data_files:
+        logger.warning("No _data.txt file found to rename in %s", dest)
+        return
+    if len(data_files) > 1:
+        logger.warning("Multiple _data.txt files found in %s, renaming only: %s", dest, data_files[0].name)
+
+    new_path = dest / f"{dest.name}_data.txt"
+    if data_files[0] != new_path:
+        data_files[0].rename(new_path)
+        logger.debug("Renamed %s -> %s", data_files[0].name, new_path.name)
 
 
 def run(ctx,
@@ -52,9 +68,16 @@ def run(ctx,
         site_name = rel.parent.name          # "OBSEA_Off"
         acquisition_name = folder.name        # "20250817-000000_Merged-019"
         return output_dir / f"{acquisition_name}_{site_name}"
-    
+
+    def export_one_folder(folder: Path) -> str:
+        dest = dest_path_for(folder)
+        result = copy_acquisition_folder(folder, dest, logger=logger, overwrite=overwrite)
+        if result in ("copied", "replaced"):
+            rename_data_file_to_match_folder(dest, logger)
+        return result
+
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        results = executor.map(lambda folder: copy_acquisition_folder(folder, dest_path_for(folder), logger=logger, overwrite=overwrite), export_folders)
+        results = executor.map(export_one_folder, export_folders)
         for result in results:
             counters[result] += 1
 
