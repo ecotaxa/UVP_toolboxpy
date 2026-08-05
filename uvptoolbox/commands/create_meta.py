@@ -164,7 +164,7 @@ def run(ctx,
     logger = setup_logger("uvptoolbox.create_meta", debug=ctx.obj.get("debug", False))
 
     overwrite = ctx.obj.get("overwrite", False)
-    
+
     logger.info("Starting create-meta")
     logger.info("Processing %d data folder(s)", len(data_dirs))
     logger.info("Overwrite existing outputs: %s", overwrite)
@@ -240,75 +240,80 @@ def run(ctx,
         constant_fields["stationid"] = station_id
 
     
-    # Create one row for each merged file, accumulating rows across all data_dirs
-    # (acquisition-type subfolders) into a single combined metadata file.
-    rows = []
-    serial_number = None
+    def build_rows_for_group(group_dirs: list[Path]):
+        """Create one row for each merged file found in the given data directories."""
+        rows = []
+        serial_number = None
 
-    for data_dir in data_dirs:
-        logger.info("Processing folder: %s", data_dir)
+        for data_dir in group_dirs:
+            logger.info("Processing folder: %s", data_dir)
 
-        # Make sure we have access to input data
-        if not data_dir.exists():
-            raise click.ClickException(f"Data directory does not exist: {data_dir}")
+            # Make sure we have access to input data
+            if not data_dir.exists():
+                raise click.ClickException(f"Data directory does not exist: {data_dir}")
 
-        merged_files = sorted(data_dir.rglob("*Merged*_data.txt"))
-        if not merged_files:
-            logger.warning("No merged acquisition files found in %s", data_dir)
-            continue
-        logger.info("Number of found merged acquisition files: %d", len(merged_files))
+            merged_files = sorted(data_dir.rglob("*Merged*_data.txt"))
+            if not merged_files:
+                logger.warning("No merged acquisition files found in %s", data_dir)
+                continue
+            logger.info("Number of found merged acquisition files: %d", len(merged_files))
 
-        for merged_file in merged_files:
-            # Get metadata fields that depend on one merged data file
-            variable_fields = extract_variable_meta_from_merged_file(
-                merged_file, cruise_value=constant_fields.get("cruise"), type_label=data_dir.name, logger=logger)
-            if serial_number is None:
-                serial_number = variable_fields["_serial_number"]
-            variable_fields = {k: v for k, v in variable_fields.items() if k != "_serial_number"}
-            # Create a row with both constant and variable fields
-            row = {**constant_fields, **variable_fields}
-            rows.append(row)
+            for merged_file in merged_files:
+                # Get metadata fields that depend on one merged data file
+                variable_fields = extract_variable_meta_from_merged_file(
+                    merged_file, cruise_value=constant_fields.get("cruise"), type_label=data_dir.name, logger=logger)
+                if serial_number is None:
+                    serial_number = variable_fields["_serial_number"]
+                variable_fields = {k: v for k, v in variable_fields.items() if k != "_serial_number"}
+                # Create a row with both constant and variable fields
+                row = {**constant_fields, **variable_fields}
+                rows.append(row)
 
-    if not rows:
+        if not rows:
+            return None, None
+
+        # Convert to Dataframe
+        df = pd.DataFrame(rows)
+        df = df[META_COLUMNS]  # sort columns
+        df = df.sort_values(by="sampledatetime")  # sort rows
+        return df, serial_number
+
+    # Rows from all data_dirs (acquisition-type subfolders) are always accumulated into
+    # a single combined metadata file, regardless of how raw data was exported.
+    df_new, serial_number = build_rows_for_group(data_dirs)
+    if df_new is None:
         logger.warning("No merged acquisition files found in any of the provided folders")
-        logger.info("Finished create-meta")
-        return
-
-    # Convert to Dataframe
-    df_new = pd.DataFrame(rows)
-    df_new = df_new[META_COLUMNS] # sort columns
-    df_new = df_new.sort_values(by="sampledatetime") # sort rows
-
-    output_name = f"uvp6_header_sn{serial_number.lower()}_{constant_fields.get('year')}_{constant_fields.get('cruise')}_metadata.txt"
-    output_file = output_dir / output_name
-
-    # If a metadata file already exists:
-    # - with --overwrite: rebuild it entirely from current data
-    # - without --overwrite: merge existing rows with newly generated rows
-
-    if output_file.exists():
-        if overwrite:
-            df_final = df_new
-            logger.info("Rebuilding metadata file from current data: %s", output_file)
-        else:
-            try:
-                df_existing = pd.read_csv(output_file, sep=";")
-            except Exception as e:
-                raise click.ClickException(f"Unable to read existing metadata file: {output_file}") from e
-
-            df_final = merge_metadata(df_existing, df_new)
-
-            logger.info(
-                "Updated existing metadata file: %s (%d existing rows + %d new rows -> %d rows after removing duplicates)",
-                output_file,len(df_existing),len(df_new),len(df_final))
     else:
-        df_final = df_new
+        output_name = f"uvp6_header_sn{serial_number.lower()}_{constant_fields.get('year')}_{constant_fields.get('cruise')}_metadata.txt"
+        output_file = output_dir / output_name
 
-    # Write output
-    try:
-        df_final.to_csv(output_file, sep=";", index=False, na_rep="nan")
-        logger.info("Metadata file written: %s", output_file)
-    except Exception as e:
-        raise click.ClickException(f"Unable to write metadata file: {output_file}") from e
+        # If a metadata file already exists:
+        # - with --overwrite: rebuild it entirely from current data
+        # - without --overwrite: merge existing rows with newly generated rows
+
+        if output_file.exists():
+            if overwrite:
+                df_final = df_new
+                logger.info("Rebuilding metadata file from current data: %s", output_file)
+            else:
+                try:
+                    df_existing = pd.read_csv(output_file, sep=";")
+                except Exception as e:
+                    raise click.ClickException(f"Unable to read existing metadata file: {output_file}") from e
+
+                df_final = merge_metadata(df_existing, df_new)
+
+                logger.info(
+                    "Updated existing metadata file: %s (%d existing rows + %d new rows -> %d rows after removing duplicates)",
+                    output_file, len(df_existing), len(df_new), len(df_final))
+        else:
+            df_final = df_new
+
+        # Write output
+        try:
+            df_final.to_csv(output_file, sep=";", index=False, na_rep="nan")
+            logger.info("Metadata file written: %s", output_file)
+        except Exception as e:
+            raise click.ClickException(f"Unable to write metadata file: {output_file}") from e
 
     logger.info("Finished create-meta")

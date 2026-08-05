@@ -1,22 +1,8 @@
-import shutil
 from pathlib import Path
 import click
 from concurrent.futures import ThreadPoolExecutor
 
-from uvptoolbox.utils import setup_logger, find_acquisition_folders, copy_acquisition_folder
-
-def empty_folder(folder_path: Path):
-    """ Empty a folder of the project or create it if it doesn't exist """
-
-    # Create the folder if it does not already exist
-    folder_path.mkdir(parents=True, exist_ok=True)
-
-    # Empty content (not the folder)
-    for item in folder_path.iterdir():
-        if item.is_file():
-            item.unlink()
-        elif item.is_dir():
-            shutil.rmtree(item)
+from uvptoolbox.utils import setup_logger, find_acquisition_folders, copy_acquisition_folder, empty_folder
 
 
 def read_acquisitions_to_skip(file: Path) -> set[str]:
@@ -53,7 +39,7 @@ def run(ctx,
             logger.warning("All acquisitions will be processed.")
 
     # work_dir = output_dir / "work"
-    work_dir = output_dir / "raw"
+    work_dir = output_dir / "currently_processed"
     work_all_dir = work_dir / "all"
     overwrite = ctx.obj.get("overwrite", False)
     threads = ctx.obj.get("threads", 1)

@@ -85,10 +85,10 @@ def load_new_data_aneris_cmd(ctx, input_dir, output_dir, project):
               help="Path to a text file listing acquisition folder names to skip (for example, already processed acquisitions).")
 @click.option("--project","-p", type=click.Path(exists=True, path_type=Path),default=None,
               help="Project directory for project mode. If not provided explicitly: "
-                   "--input-dir is set to <project>/raw, --output-dir is set to <project>, --acquisitions-to-skip-file is set to <project>/logs/processed_acquisitions.txt")
+                   "--input-dir is set to <project>/downloaded, --output-dir is set to <project>, --acquisitions-to-skip-file is set to <project>/logs/processed_acquisitions.txt")
 @click.pass_context
 def start_process_cmd(ctx, input_dir, output_dir, reset_work_dir, skip_processed, acquisitions_to_skip_file, project):
-    """Prepare a work directory and copy unprocessed raw data into work/all."""
+    """Prepare a work directory and copy unprocessed raw data into currently_processed/all."""
     from uvptoolbox.commands import start_process
     
     if input_dir is None:
@@ -117,7 +117,7 @@ def start_process_cmd(ctx, input_dir, output_dir, reset_work_dir, skip_processed
 @click.option("--data-dir", "-d", type=click.Path(exists=True, path_type=Path),default=None,
               help="Directory containing UVP data files to convert in place.")
 @click.option("--project","-p", type=click.Path(exists=True, path_type=Path),default=None,
-              help="Project directory for project mode. If --data-dir is not provided, it is set to <project>/work/all.")
+              help="Project directory for project mode. If --data-dir is not provided, it is set to <project>/currently_processed/all.")
 @click.pass_context
 def convert_format_cmd(ctx, data_dir, project):
     """Convert UVP data.txt files from 2023 format to the 2021 format expected downstream. Conversion is done in place."""
@@ -137,7 +137,7 @@ def convert_format_cmd(ctx, data_dir, project):
 @click.option("--input-dir", "-i", type=click.Path(exists=True, path_type=Path), default=None,
               help="Input directory containing acquisition folders or UVP data files to inspect.")
 @click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
-              help="Project directory for project mode. If --input-dir is not provided, it is set to <project>/work/all.")
+              help="Project directory for project mode. If --input-dir is not provided, it is set to <project>/currently_processed/all.")
 @click.pass_context
 def acquisition_info_cmd(ctx, input_dir, project):
     """Inspect acquisition configurations found in UVP data files."""
@@ -170,7 +170,7 @@ def acquisition_info_cmd(ctx, input_dir, project):
                    "     ACQ_obsea_on,2.000,OBSEA_On")
 @click.option("--project", "-p", type=click.Path(exists=True, path_type=Path),default=None,
               help="Project directory for project mode. If not provided explicitly: "
-                   "--input-dir is set to <project>/work/all, --output-dir is set to <project>/work/by_acquisition, --config-file is set to <project>/config/acquisition_configs.csv")
+                   "--input-dir is set to <project>/currently_processed/all, --output-dir is set to <project>/currently_processed/by_acquisition, --config-file is set to <project>/config/acquisition_configs.csv")
 @click.pass_context
 def acquisition_split_cmd(ctx, input_dir, output_dir, config_file, project):
     """Split UVP acquisitions folders into one folder per acquisition configuration."""
@@ -200,7 +200,7 @@ def acquisition_split_cmd(ctx, input_dir, output_dir, config_file, project):
 @click.option("--data-dir", "-d", type=click.Path(exists=True, path_type=Path), default=None,
               help="Directory containing UVP data files to inspect.")
 @click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
-              help="Project directory for project mode. If data-dir is not provided explicitly, all folders in <project>/work/by_acquisition will be inspected")
+              help="Project directory for project mode. If data-dir is not provided explicitly, all folders in <project>/currently_processed/by_acquisition will be inspected")
 @click.pass_context
 def time_info_cmd(ctx, data_dir, project):
     """Summarize the time coverage of UVP data files in a directory or a work directory of a project."""
@@ -234,7 +234,7 @@ def time_info_cmd(ctx, data_dir, project):
               help="Optional start datetime in format YYYYMMDD-HHMMSS. Acquisitions before this datetime are ignored. "
                    "If not provided, the earliest datetime found in the data is used.")
 @click.option("--project","-p", type=click.Path(exists=True, path_type=Path),default=None,
-              help="Project directory for project mode. If data-dir is not provided explicitly, all folders in <project>/work/by_acquisition will be processed.")
+              help="Project directory for project mode. If data-dir is not provided explicitly, all folders in <project>/currently_processed/by_acquisition will be processed.")
 @click.pass_context
 def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project):
     """Merge acquisitions by time step or by day, and copy corresponding vignettes."""
@@ -275,8 +275,8 @@ def time_merge_cmd(ctx, data_dir, by_day, time_step, start_datetime, project):
 @click.option("--constant-depth",type=str,default=None,help="Constant depth of the mooring in m.")
 @click.option("--station-id",type=str,default=None, help="Station identifier. If not provided, the cruise acronym is used as fallback.")
 @click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
-              help="Project directory for project mode. If data-dir is not provided explicitly, one metadata file is created "
-                   "for each acquisition-configuration subdirectory in <project>/work/by_acquisition. "
+              help="Project directory for project mode. If data-dir is not provided explicitly, all folders in "
+                   "<project>/currently_processed/by_acquisition are combined into a single metadata file. "
               "If not provided explicitly: "
                    "--config-dir is set to <project>/config, --output-dir is set to <project>/meta")
 @click.pass_context
@@ -319,26 +319,31 @@ def create_meta_cmd(ctx,data_dir,config_dir,output_dir,latitude,longitude,consta
               help="Output directory where merged acquisition folders will be copied.")
 @click.option("--processed-acquisitions-file", type=click.Path(path_type=Path),default=None,
               help="Optional text file to update with processed acquisitions names (used for merged).")
+@click.option("--split-by-type", is_flag=True, default=False,
+              help="Organize the output directory with one subfolder per acquisition type instead of a single flat folder. "
+                   "This does not affect create-meta, whose metadata file always contains all acquisitions. Default: False.")
+@click.option("--clean-work-dir/--no-clean-work-dir", default=True,
+              help="After a successful export, empty the project's currently_processed directory (both all/ and "
+                   "by_acquisition/), since its content has already been exported. Only applies in project mode. "
+                   "Default: --clean-work-dir.")
 @click.option("--project", "-p", type=click.Path(exists=True, path_type=Path), default=None,
               help="Project directory for project mode. If not provided explicitly: "
-                   "--input-dir is set to <project>/work/by_acquisition, "
-                   "--output-dir is set to <project>/processed, "
+                   "--input-dir is set to <project>/currently_processed/by_acquisition, "
+                   "--output-dir is set to <project>/raw, "
                    "--processed-acquisitions-file is set to <project>/logs/processed_acquisitions.txt.")
 @click.pass_context
-def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, project):
+def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, split_by_type, clean_work_dir, project):
     """Export merged acquisition folders to a destination directory."""
     from uvptoolbox.commands import export_results
 
     if input_dir is None:
         if project is not None:
-            # input_dir = project / "work" / "by_acquisition"
             input_dir = project / "currently_processed" / "by_acquisition"
         else:
             raise click.UsageError("You must provide either --project or --input-dir.")
 
     if output_dir is None:
         if project is not None:
-            # output_dir = project / "processed"
             output_dir = project / "raw"
         else:
             raise click.UsageError("You must provide either --project or --output-dir.")
@@ -346,7 +351,10 @@ def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, 
     if processed_acquisitions_file is None and project is not None:
         processed_acquisitions_file = project / "logs" / "processed_acquisitions.txt"
 
-    export_results.run(ctx, input_dir=input_dir, output_dir=output_dir, processed_acquisitions_file=processed_acquisitions_file)
+    work_dir = project / "currently_processed" if project is not None else None
+
+    export_results.run(ctx, input_dir=input_dir, output_dir=output_dir, processed_acquisitions_file=processed_acquisitions_file,
+                       split_by_type=split_by_type, clean_work_dir=clean_work_dir, work_dir=work_dir)
 
 
 @cli.command(name="run-default-pipeline")
@@ -360,8 +368,13 @@ def export_results_cmd(ctx, input_dir, output_dir, processed_acquisitions_file, 
               help="Time step in hours used to merge the data.")
 @click.option("--start-datetime", "-s", default=None,
               help="Optional start datetime in format YYYYMMDD-HHMMSS.")
+@click.option("--split-by-type", is_flag=True, default=False,
+              help="Organize the exported raw data by acquisition type instead of a single flat folder. "
+                   "The metadata file always contains all acquisitions regardless of this option. Default: False.")
+@click.option("--clean-work-dir/--no-clean-work-dir", default=True,
+              help="After a successful export, empty the project's currently_processed directory. Default: --clean-work-dir.")
 @click.pass_context
-def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_datetime):
+def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_datetime, split_by_type, clean_work_dir):
     """Run the default UVP processing pipeline in project mode."""
 
     from uvptoolbox.commands import (load_new_data,start_process,convert_format,acquisition_split,time_merge,create_meta,export_results)
@@ -419,11 +432,12 @@ def run_default_pipeline_cmd(ctx, project, input_dir, by_day, time_step, start_d
     click.echo("\n---- Running export-results ----")
     export_results.run(
         ctx,
-        # input_dir=project / "work" / "by_acquisition",
         input_dir=project / "currently_processed" / "by_acquisition",
-        # output_dir=project / "processed",
         output_dir=project / "raw",
-        processed_acquisitions_file=project / "logs" / "processed_acquisitions.txt")
+        processed_acquisitions_file=project / "logs" / "processed_acquisitions.txt",
+        split_by_type=split_by_type,
+        clean_work_dir=clean_work_dir,
+        work_dir=project / "currently_processed")
 
     click.echo("\nDefault pipeline completed.")
 

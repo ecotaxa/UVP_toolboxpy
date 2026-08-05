@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import click
 from concurrent.futures import ThreadPoolExecutor
-from uvptoolbox.utils import setup_logger, copy_acquisition_folder
+from uvptoolbox.utils import setup_logger, copy_acquisition_folder, empty_folder
 # from uvptoolbox.utils import setup_logger, copy_acquisition_folder_to_processed
 
 
@@ -32,7 +32,10 @@ def rename_data_file_to_match_folder(dest: Path, logger: logging.Logger) -> None
 def run(ctx,
         input_dir: Path,
         output_dir: Path,
-        processed_acquisitions_file: Path = None):
+        processed_acquisitions_file: Path = None,
+        split_by_type: bool = False,
+        clean_work_dir: bool = True,
+        work_dir: Path = None):
     """Export processed data (merged acquisition folders)."""
 
     logger = setup_logger("uvptoolbox.export_results", debug=ctx.obj.get("debug", False))
@@ -48,6 +51,9 @@ def run(ctx,
     logger.info("Input directory: %s", input_dir)
     logger.info("Output directory: %s", output_dir)
     logger.info("Overwrite existing outputs: %s", overwrite)
+    logger.info("Split by acquisition type: %s", split_by_type)
+    if clean_work_dir and work_dir is not None:
+        logger.info("Work directory to clean up after export: %s", work_dir)
     if threads > 1:
         logger.info("Parallel threads: %d", threads)
 
@@ -55,7 +61,7 @@ def run(ctx,
 
     if not export_folders:
         logger.warning("No merged or UsedForMerge acquisition folders found in %s", input_dir)
-        return 
+        return
     logger.info("Number of folders to export: %d", len(export_folders))
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -67,6 +73,8 @@ def run(ctx,
         rel = folder.relative_to(input_dir)
         site_name = rel.parent.name          # "OBSEA_Off"
         acquisition_name = folder.name        # "20250817-000000_Merged-019"
+        if split_by_type:
+            return output_dir / site_name / acquisition_name
         return output_dir / f"{acquisition_name}_{site_name}"
 
     def export_one_folder(folder: Path) -> str:
@@ -109,6 +117,13 @@ def run(ctx,
         processed_acquisitions = {folder.name[:15] for folder in input_dir.rglob("*_UsedForMerge") if folder.is_dir() }
         append_processed_acquisitions(processed_acquisitions_file,processed_acquisitions)
         logger.info("Processed acquisitions file updated: %s (%d acquisition names added)",processed_acquisitions_file,len(processed_acquisitions))
+
+    if clean_work_dir:
+        if work_dir is not None:
+            empty_folder(work_dir)
+            logger.info("Cleaned up work directory: %s", work_dir)
+        else:
+            logger.debug("clean-work-dir requested but no work directory was provided, nothing to clean.")
 
     logger.info("Finished export-results")
 

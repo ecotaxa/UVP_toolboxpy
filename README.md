@@ -76,11 +76,11 @@ A project corresponds conceptually to a cruise, a time series, etc. In practice,
 Typical structure:
 ```
 my_project/
-    raw/                                folders storing all raw acquisitions 
-    work/                               data created by the various processing steps
+    downloaded/                         folders storing all downloaded raw acquisitions
+    currently_processed/                data created by the various processing steps
         all/                            acquisitions selected for processing
         by_acquisition/                 acquisitions split by acquisition configuration
-    processed/                          exported merged acquisition folders
+    raw/                                exported merged acquisition folders (final output)
     config/                             configuration files
         acquisition_configs.csv         optional acquisition split configuration file
         cruise_info.txt                 optional file containing general mooring informations
@@ -98,25 +98,25 @@ uvptoolbox run-default-pipeline -p /path/to/project -i /path/to/source --by-day
 
 The commands underlying this automatic processing pipeline can be run step by step independently in a project:
 ```
-# Copy acquisition folders from a source input directory to the raw directory of a project (<project>/raw`).
+# Copy acquisition folders from a source input directory to the downloaded directory of a project (<project>/downloaded`).
 uvptoolbox load-new-data -i /path/to/source -p /path/to/project
 
-# Prepare a work directory and copy acquisitions not already processed from `<project>/raw` to `<project>/work/all`.
+# Prepare a work directory and copy acquisitions not already processed from `<project>/downloaded` to `<project>/currently_processed/all`.
 uvptoolbox start-process -p /path/to/project
 
-# Convert UVP6 data.txt files in `<project>/work/all` from the 2023 format to the 2021 format expected downstream.
+# Convert UVP6 data.txt files in `<project>/currently_processed/all` from the 2023 format to the 2021 format expected downstream.
 uvptoolbox convert-format -p /path/to/project
 
-# Split acquisitions in `<project>/work/all` into one folder per acquisition configuration and store them in `<project>/work/by_acquisition`.
+# Split acquisitions in `<project>/currently_processed/all` into one folder per acquisition configuration and store them in `<project>/currently_processed/by_acquisition`.
 uvptoolbox acquisition-split -p /path/to/project
 
-# Merge acquisitions in each `<project>/work/by_acquisition` by day, and copy corresponding vignettes.
+# Merge acquisitions in each `<project>/currently_processed/by_acquisition` by day, and copy corresponding vignettes.
 uvptoolbox time-merge -p /path/to/project --by-day 
 
 # Create or update metadata file(s) in `<project>/meta` from merged UVP data files and project configuration files.
 uvptoolbox create-meta -p /path/to/project 
 
-# Export processed merged data together with the corresponding `_UsedForMerge` folders to `<project>/processed`
+# Export processed merged data together with the corresponding `_UsedForMerge` folders to `<project>/raw`
 uvptoolbox export-results -p /path/to/project
 ```
 
@@ -136,7 +136,7 @@ uvptoolbox load-new-data -i /path/to/source -o /path/to/output
 ```
 uvptoolbox load-new-data -i /path/to/source -p /path/to/project
 ```
-Default output directory in project mode is set to `<project>/raw`.
+Default output directory in project mode is set to `<project>/downloaded`.
 
 #### Notes : 
 The source directory containing UVP6 downloads can be organized in an arborescence such as:
@@ -155,13 +155,13 @@ The command searches recursively through all directories and subdirectories to f
 and copies them into the output directory without preserving the original grouping.
 
 ### start-process
-Prepare a working directory named `work` for the upcoming processing steps and copy unprocessed raw data into `work/all`.
+Prepare a working directory named `currently_processed` for the upcoming processing steps and copy unprocessed raw data into `currently_processed/all`.
 
 #### Standalone mode:
 ```
 uvptoolbox start-process -i /path/to/input -o /path/to/output_root
 ```
-This creates `<output_root>/work/all` and copy acquisition folders into it. 
+This creates `<output_root>/currently_processed/all` and copy acquisition folders into it. 
 
 Options:
 - `--reset-work-dir` Empty the work directory before copying acquisitions. If you want to work on a new set of data to be processed you should reset the work folder whose output have already been archived. However, if you want to process data loaded in the work directory through multiple runs at the same time, you have to do multiple copy without erasing the work folder. Default: False
@@ -172,7 +172,7 @@ Options:
 ```
 uvptoolbox start-process -p /path/to/project
 ```
-In project mode, the command creates `<project>/work/all` and copy acquisition folder from `<project>/raw` into it. 
+In project mode, the command creates `<project>/currently_processed/all` and copy acquisition folder from `<project>/downloaded` into it. 
 By default, `acquisitions-to-skip-file` is search in `<project>/logs/processed_acquisitions.txt` and acquisition folders listed in this file are not considered to avoid processing already processed data. 
 
 ### convert-format
@@ -192,7 +192,7 @@ uvptoolbox convert-format -d /path/to/data_dir
 ```
 uvptoolbox convert-format -p /path/to/project
 ```
-Default working directory in project mode is set to `<project>/work/all`.
+Default working directory in project mode is set to `<project>/currently_processed/all`.
 
 ### acquisition-info
 Inspect acquisition configurations found in UVP data files. It is mainly intended as a helper command to inspect available acquisition settings before running `acquisition-split`. It can also help prepare an acquisition_configs.csv file.
@@ -209,7 +209,7 @@ uvptoolbox acquisition-info -i /path/to/data_dir
 ```
 uvptoolbox acquisition-info -p /path/to/project
 ```
-In project mode the input directory defaults to `<project>/work/all`.
+In project mode the input directory defaults to `<project>/currently_processed/all`.
 
 ### acquisition-split
 Split UVP acquisitions folders into one folder per acquisition configuration.
@@ -247,8 +247,8 @@ uvptoolbox acquisition-split -i /path/to/input -o /path/to/output -c /path/to/co
 uvptoolbox acquisition-split -p /path/to/project
 ```
 Default arguments in project mode:
-- input : `<project>/work/all`
-- output : `<project>/work/by_acquisition`
+- input : `<project>/currently_processed/all`
+- output : `<project>/currently_processed/by_acquisition`
 - config file : `<project>/config/acquisition_configs.csv`
 
 ### time-info
@@ -272,7 +272,7 @@ uvptoolbox time-info -d /path/to/data_dir
 ```
 uvptoolbox time-info -p /path/to/project
 ```
-In project mode all folders inside `<project>/work/by_acquisition` are inspected individually.
+In project mode all folders inside `<project>/currently_processed/by_acquisition` are inspected individually.
 
 ### time-merge
 Merge acquisitions by time step or by day, and copy corresponding vignettes.
@@ -309,7 +309,7 @@ uvptoolbox time-merge -p /path/to/project --by-day
 # to merge by fixed XX-hours time step bins
 uvptoolbox time-merge -p /path/to/project -t XX
 ```
-In project mode all folders inside `<project>/work/by_acquisition` are processed.
+In project mode all folders inside `<project>/currently_processed/by_acquisition` are processed.
 
 
 ### create-meta
@@ -370,11 +370,11 @@ Priority between sources is:
 uvptoolbox create-meta -p /path/to/project
 ```
 In project mode:
-- all folders inside `<project>/work/by_acquisition` are processed. One metadata file is created for each acquisition-configuration subdirectory. For example, if `<project>/work/by_acquisition` contains `OBSEA_Off/` and `OBSEA_On/` the command will generate one metadata file for each of these folders.
+- all folders inside `<project>/currently_processed/by_acquisition` are processed and combined into a single metadata file, regardless of how many acquisition-configuration subdirectories exist (for example `OBSEA_Off/` and `OBSEA_On/`).
 - the configuration directory defaults to `<project>/config`,
 - the output directory defaults to `<project>/meta`.
 
-Metadata files are written in the output directory with names of the form: `<cruise>_<acquisition_folder_name>_metadata.txt`. For example, with `cruise=anerisvilanova` the following files will be created: `anerisvilanova_OBSEA_Off_metadata.txt`, `anerisvilanova_OBSEA_On_metadata.txt`.
+The metadata file is written in the output directory with a name of the form: `uvp6_header_sn<serial_number>_<year>_<cruise>_metadata.txt`.
 
 #### Notes
 - cruise is read from the acron field in cruise_info.txt when available.
@@ -403,6 +403,7 @@ In standalone mode:
 
 Optional argument:
 - `--processed-acquisitions-file` path to a text file that will be updated with processed acquisition names. If --processed-acquisitions-file is provided, the command searches for folders named *_UsedForMerge in the input directory and appends their corresponding raw acquisition names (YYYYMMDD-HHMMSS) to the file. This can be useful to keep track of acquisitions already exported and avoid reprocessing them in future runs.
+- `--split-by-type` organize the output directory with one subfolder per acquisition type instead of a single flat folder (see Notes below). Default: False. This has no effect on `create-meta`, whose metadata file always contains all acquisitions.
 
 #### Project mode:
 
@@ -411,24 +412,20 @@ uvptoolbox export-results -p /path/to/project
 ```
 
 In project mode:
-- the input directory defaults to `<project>/work/by_acquisition`,
-- the output directory defaults to `<project>/processed`,
+- the input directory defaults to `<project>/currently_processed/by_acquisition`,
+- the output directory defaults to `<project>/raw`,
 - the processed acquisitions file defaults to `<project>/logs/processed_acquisitions.txt`.
 
 #### Notes
-The command preserves the relative tree structure of the input directory.
+By default, the output directory is flat: each exported folder is named `<acquisition_name>_<acquisition_type>`, where `<acquisition_type>` is the name of the source subfolder in `<project>/currently_processed/by_acquisition` (for example `OBSEA_Off`, `OBSEA_On`).
 
 For example, if the input directory contains:
 ```
-processed/
+currently_processed/by_acquisition/
     OBSEA_Off/
         20250709-000000_Merged-002/
         20250709-000000_UsedForMerge/
         20250709-010000_UsedForMerge/
-        20250710-000000_Merged-002/
-        20250710-000000_UsedForMerge/
-        20250710-010000_UsedForMerge/
-        someting_else/
     OBSEA_On/
         20250709-000000_Merged-005/
         ...
@@ -436,14 +433,21 @@ processed/
 
 the exported output directory will contain:
 ```
-processed/
+raw/
+    20250709-000000_Merged-002_OBSEA_Off/
+    20250709-000000_UsedForMerge_OBSEA_Off/
+    20250709-010000_UsedForMerge_OBSEA_Off/
+    20250709-000000_Merged-005_OBSEA_On/
+    ...
+```
+
+With `--split-by-type`, the relative tree structure of the input directory is preserved instead, with one subfolder per acquisition type:
+```
+raw/
     OBSEA_Off/
         20250709-000000_Merged-002/
         20250709-000000_UsedForMerge/
         20250709-010000_UsedForMerge/
-        20250710-000000_Merged-002/
-        20250710-000000_UsedForMerge/
-        20250710-010000_UsedForMerge/
     OBSEA_On/
         20250709-000000_Merged-005/
         ...

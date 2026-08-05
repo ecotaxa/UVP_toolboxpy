@@ -33,6 +33,20 @@ def find_acquisition_folders(source_root: Path) -> list[Path]:
     return sorted(acquisition_folders)
 
 
+def empty_folder(folder_path: Path):
+    """ Empty a folder of the project or create it if it doesn't exist """
+
+    # Create the folder if it does not already exist
+    folder_path.mkdir(parents=True, exist_ok=True)
+
+    # Empty content (not the folder)
+    for item in folder_path.iterdir():
+        if item.is_file():
+            item.unlink()
+        elif item.is_dir():
+            shutil.rmtree(item)
+
+
 # def copy_acquisition_folder(src: Path, dest: Path, logger: logging.Logger, overwrite: bool = False ) -> str:
 #     """Copy one acquisition folder src to dest. Returns: 'copied', 'skipped', or 'replaced' """
 
