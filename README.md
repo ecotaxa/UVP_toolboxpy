@@ -334,7 +334,7 @@ uvptoolbox create-meta -d /path/to/data_folder  -c /path/to/config_folder  -o /p
 - `-c/--config-dir` must point to the folder containing configuration file: `meta_constants.txt` , `cruise_info.txt` and `HW_*.txt`
 - `-o/--output-dir` is the directory where the metadata file will be written.
 
-Output metadata files are named as: `<cruise>_<data_folder_name>_metadata.txt`. For example, processing the folder `OBSEA_Off` with `cruise=anerisvilanova` creates: `anerisvilanova_OBSEA_Off_metadata.txt`
+The output metadata file is named `uvp6_header_sn<serial_number>_<year>_<cruise>.txt`.
 
 Optional argument:   
 - `--latitude` latitude of the mooring in decimal degrees,
@@ -374,7 +374,7 @@ In project mode:
 - the configuration directory defaults to `<project>/config`,
 - the output directory defaults to `<project>/meta`.
 
-The metadata file is written in the output directory with a name of the form: `uvp6_header_sn<serial_number>_<year>_<cruise>_metadata.txt`.
+The metadata file is written in the output directory with a name of the form: `uvp6_header_sn<serial_number>_<year>_<cruise>.txt`.
 
 #### Notes
 - cruise is read from the acron field in cruise_info.txt when available.

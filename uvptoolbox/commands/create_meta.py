@@ -120,15 +120,18 @@ def extract_variable_meta_from_merged_file(merged_file: Path, cruise_value: str,
         # - sampledatetime inferred from the merged file name
         logger.warning("No acquisition data found in merged file: %s", merged_file)
         first_datetime = matches[-1].split("-")
+        endimg = 0
     else:
         first_datetime = data_lines[0].split(",")[0].strip().split("-")
+        # Images are indexed from firstimage=0, so the last image index is len(data_lines) - 1.
+        endimg = len(data_lines) - 1
 
     return {
         "filename": f"{file_stem.removesuffix('_data')}_{type_label}",
         "profileid": profileid,
         "firstimage":0,
         "volimage": hw_fields[22],
-        "endimg": len(data_lines),
+        "endimg": endimg,
         "sampledatetime": first_datetime[0] + "-" + first_datetime[1],
         "_serial_number": hw_fields[1],
     }
@@ -284,7 +287,7 @@ def run(ctx,
     if df_new is None:
         logger.warning("No merged acquisition files found in any of the provided folders")
     else:
-        output_name = f"uvp6_header_sn{serial_number.lower()}_{constant_fields.get('year')}_{constant_fields.get('cruise')}_metadata.txt"
+        output_name = f"uvp6_header_sn{serial_number.lower()}_{constant_fields.get('year')}_{constant_fields.get('cruise')}.txt"
         output_file = output_dir / output_name
 
         # If a metadata file already exists:
