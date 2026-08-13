@@ -213,7 +213,10 @@ def run(ctx,
             # manual adjustments
             hw_config["aa"]= to_float_or_nan(hw_config.get("Aa")) / 1_000_000 if hw_config.get("Aa") else np.nan
             hw_config["exp"] = to_float_or_nan(hw_config.get("Exp")) if hw_config.get("Exp") else np.nan
-            hw_config["pixelsize"] = to_float_or_nan(hw_config.get("Pixel_Size"))/ 1000 if hw_config.get("Pixel_Size") else np.nan
+            hw_config["pixelsize"] = to_float_or_nan(hw_config.get("Pixel_Size")) if hw_config.get("Pixel_Size") else np.nan
+            # for now we keep pixelsize in micrometers
+            # hw_config["pixelsize"] = to_float_or_nan(hw_config.get("Pixel_Size"))/ 1000 if hw_config.get("Pixel_Size") else np.nan
+
             # add to constant_fields
             constant_fields.update({k: v for k, v in hw_config.items() if k in CONSTANT_FIELDS})
         else:
